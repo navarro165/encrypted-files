@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Selected state (filled dot) -->
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="@android:color/black" />
+            <size android:width="20dp" android:height="20dp" />
+        </shape>
+    </item>
+    
+    <!-- Default state (empty dot) -->
+    <item>
+        <shape android:shape="oval">
+            <stroke android:width="2dp" android:color="@android:color/darker_gray" />
+            <solid android:color="@android:color/transparent" />
+            <size android:width="20dp" android:height="20dp" />
+        </shape>
+    </item>
+    
+</selector> 

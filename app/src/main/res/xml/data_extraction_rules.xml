@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Data extraction rules for encrypted file storage app.
+   Prevents sensitive data from being included in cloud backups or device transfers.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Include domains first -->
+        <include domain="file"/>
+        <include domain="sharedpref"/>
+        <include domain="database"/>
+        
+        <!-- Exclude all encrypted files and keys from cloud backup -->
+        <exclude domain="file" path="encrypted_files"/>
+        <exclude domain="sharedpref" path="secure_file_keys"/>
+        <exclude domain="database"/>
+        
+        <!-- Allow backup of non-sensitive settings -->
+        <include domain="sharedpref" path="app_settings.xml"/>
+    </cloud-backup>
+    
+    <device-transfer>
+        <!-- Include domains first -->
+        <include domain="file"/>
+        <include domain="sharedpref"/>
+        <include domain="database"/>
+        
+        <!-- Exclude sensitive data from device-to-device transfers -->
+        <exclude domain="file" path="encrypted_files"/>
+        <exclude domain="sharedpref" path="secure_file_keys"/>
+        <exclude domain="database"/>
+        
+        <!-- Allow transfer of non-sensitive settings -->
+        <include domain="sharedpref" path="app_settings.xml"/>
+    </device-transfer>
+</data-extraction-rules>

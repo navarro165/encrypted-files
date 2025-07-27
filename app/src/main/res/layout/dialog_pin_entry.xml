@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Title and Subtitle -->
+    <TextView
+        android:id="@+id/pinTitleText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/enter_pin_title"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="8dp"
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:id="@+id/pinSubtitleText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/enter_pin_message"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp"
+        android:textColor="@android:color/darker_gray" />
+
+    <!-- Error Text -->
+    <TextView
+        android:id="@+id/pinErrorText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/error_message"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/holo_red_dark"
+        android:visibility="gone" />
+
+    <!-- PIN Dots -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginBottom="32dp">
+
+        <View
+            android:id="@+id/pinDot1"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/pin_dot_selector" />
+
+        <View
+            android:id="@+id/pinDot2"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/pin_dot_selector" />
+
+        <View
+            android:id="@+id/pinDot3"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/pin_dot_selector" />
+
+        <View
+            android:id="@+id/pinDot4"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/pin_dot_selector" />
+
+    </LinearLayout>
+
+    <!-- Number Pad -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Row 1: 1, 2, 3 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/button1"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_1" />
+
+            <Button
+                android:id="@+id/button2"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_2" />
+
+            <Button
+                android:id="@+id/button3"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_3" />
+
+        </LinearLayout>
+
+        <!-- Row 2: 4, 5, 6 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/button4"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_4" />
+
+            <Button
+                android:id="@+id/button5"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_5" />
+
+            <Button
+                android:id="@+id/button6"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_6" />
+
+        </LinearLayout>
+
+        <!-- Row 3: 7, 8, 9 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/button7"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_7" />
+
+            <Button
+                android:id="@+id/button8"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_8" />
+
+            <Button
+                android:id="@+id/button9"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_9" />
+
+        </LinearLayout>
+
+        <!-- Row 4: Cancel, 0, Delete -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/buttonCancel"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_cancel"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/button0"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_0" />
+
+            <Button
+                android:id="@+id/buttonDelete"
+                style="@style/PinButtonStyle"
+                android:text="@string/pin_button_delete"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout> 

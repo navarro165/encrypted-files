@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Base configuration for enhanced security -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Only trust system CA certificates -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Domain-specific configurations can be added here if needed in the future -->
+    <!-- Example for API endpoint certificate pinning:
+    <domain-config>
+        <domain includeSubdomains="true">api.example.com</domain>
+        <pin-set expiration="2025-01-01">
+            <pin digest="SHA-256">base64_encoded_pin</pin>
+        </pin-set>
+    </domain-config>
+    -->
+</network-security-config> 

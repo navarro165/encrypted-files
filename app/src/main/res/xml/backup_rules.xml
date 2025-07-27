@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+   Backup rules for encrypted file storage app.
+   Excludes all sensitive data from backups for security.
+-->
+<full-backup-content>
+    <!-- Include files directory first -->
+    <include domain="file" path="files"/>
+    
+    <!-- Exclude all encrypted files and keys -->
+    <exclude domain="file" path="files/encrypted_files"/>
+    
+    <!-- Include shared preferences first -->
+    <include domain="sharedpref"/>
+    
+    <!-- Exclude all shared preferences containing encryption keys -->
+    <exclude domain="sharedpref" path="secure_file_keys"/>
+    
+    <!-- Exclude all database files that might contain key references -->
+    <exclude domain="database"/>
+    
+    <!-- Allow backup of non-sensitive app settings -->
+    <include domain="sharedpref" path="app_settings.xml"/>
+</full-backup-content>

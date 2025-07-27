@@ -1,0 +1,128 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+build/
+.gradle/
+.idea/
+local.properties
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# Gradle files
+# Local configuration file (sdk location, etc)
+
+# AVD folder
+.android/avd/
+
+# Android Studio
+
+# Keystore files
+*.jks
+*.keystore
+keystore.properties
+
+# External native build files
+.externalNativeBuild
+
+# My custom encrypted files directory
+encrypted_files/
+/GEMINI.md
+AUDIT_REPORT.md
+
+# IDE and language-specific files
+.vscode/
+.kotlin/
+
+# Claude AI files
+.claude/
+
+# CodeQL artifacts and databases
+codeql-db/
+*.sarif
+*.bqrs
+codeql-results.*
+codeql-database.*
+
+# Log files
+*.log
+act_output.log
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+*.bak
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Android build outputs
+app/build/
+app/release/
+app/debug/
+
+# Gradle wrapper (keep gradlew and gradlew.bat, ignore wrapper jar)
+gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration files
+local.properties
+keystore.properties
+
+# Test results
+app/build/test-results/
+app/build/reports/
+
+# Generated source files
+app/build/generated/
+app/build/intermediates/
+
+# ProGuard files
+app/build/outputs/mapping/
+
+# Crashlytics plugin
+app/fabric.properties
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Bundle artifacts
+*.hprof
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
