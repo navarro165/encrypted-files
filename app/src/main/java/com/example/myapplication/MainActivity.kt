@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Toast
@@ -147,6 +148,12 @@ class MainActivity : AppCompatActivity() {
             checkAuthenticationAndOpenFilePicker()
         }
 
+        // Check for first-time setup and biometric verification
+        checkFirstTimeSetup()
+        
+        // Always check authentication status on app launch
+        checkAuthenticationOnLaunch()
+        
         loadEncryptedFiles()
     }
     
@@ -194,9 +201,19 @@ class MainActivity : AppCompatActivity() {
         }
         
         // Check authentication status
-        when (authenticationManager.getAuthenticationStatus()) {
+        val authStatus = authenticationManager.getAuthenticationStatus()
+        val isPinSet = authenticationManager.isPinSet()
+        
+        when (authStatus) {
             AuthenticationManager.AuthStatus.SETUP_REQUIRED -> {
-                showPinSetupDialog()
+                if (isPinSet) {
+                    // PIN is set but status is SETUP_REQUIRED - this shouldn't happen
+                    // Force authentication required and proceed
+                    authenticationManager.forceAuthenticationRequired()
+                    showTwoFactorAuthentication(true) // Open file picker after auth
+                } else {
+                    showPinSetupDialog()
+                }
             }
             AuthenticationManager.AuthStatus.LOCKED -> {
                 val remainingTime = maxOf(
@@ -206,7 +223,7 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Authentication locked. Try again in $remainingTime minutes", Toast.LENGTH_LONG).show()
             }
             AuthenticationManager.AuthStatus.AUTH_REQUIRED -> {
-                showTwoFactorAuthentication()
+                showTwoFactorAuthentication(true) // Open file picker after auth
             }
             AuthenticationManager.AuthStatus.AUTHENTICATED -> {
                 openFilePicker()
@@ -236,12 +253,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showTwoFactorAuthentication() {
+    private fun showTwoFactorAuthentication(openFilePickerAfterAuth: Boolean = false) {
+        // Show security overlay to hide content during authentication
+        binding.securityOverlay.visibility = View.VISIBLE
+        
         // First factor: Biometric authentication
-        showBiometricPromptForEncryption()
+        showBiometricPromptForEncryption(openFilePickerAfterAuth)
     }
     
-    private fun showBiometricPromptForEncryption() {
+    private fun showBiometricPromptForEncryption(openFilePickerAfterAuth: Boolean = false) {
         // Check if authentication is locked
         if (!authenticationManager.canAttemptAuthentication()) {
             val remainingTime = maxOf(
@@ -267,7 +287,7 @@ class MainActivity : AppCompatActivity() {
                     // Security: Validate authentication result
                     if (validateAuthenticationResult(result)) {
                         // First factor succeeded, now show PIN entry (second factor)
-                        showPinEntryDialog()
+                        showPinEntryDialog(openFilePickerAfterAuth)
                     } else {
                         Toast.makeText(this@MainActivity, "Biometric validation failed", Toast.LENGTH_SHORT).show()
                         authenticationManager.recordFailedAttempt()
@@ -285,6 +305,9 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             Toast.makeText(applicationContext, "Too many failed attempts. Authentication locked for 30 minutes", Toast.LENGTH_LONG).show()
                         }
+                    } else {
+                        // User cancelled biometric authentication
+                        binding.securityOverlay.visibility = View.GONE
                     }
                 }
 
@@ -296,6 +319,8 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(applicationContext, "Biometric failed. ${5 - attempts} attempts remaining", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(applicationContext, "Too many failed attempts. Authentication locked for 30 minutes", Toast.LENGTH_LONG).show()
+                        // Hide security overlay when authentication is locked
+                        binding.securityOverlay.visibility = View.GONE
                     }
                 }
             })
@@ -316,6 +341,8 @@ class MainActivity : AppCompatActivity() {
                                 AuthenticationManager.PinSetupResult.SUCCESS -> {
                                     Toast.makeText(this@MainActivity, "PIN setup complete! You can now access encrypted files.", Toast.LENGTH_LONG).show()
                                     dialog.dismiss()
+                                    
+                                    // After PIN setup, proceed to normal authentication flow
                                     showTwoFactorAuthentication()
                                 }
                                 AuthenticationManager.PinSetupResult.WEAK_PIN -> {
@@ -339,7 +366,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
     
-    private fun showPinEntryDialog() {
+    private fun showPinEntryDialog(openFilePickerAfterAuth: Boolean = false) {
         val lockoutEndTime = if (authenticationManager.isPinLocked()) authenticationManager.getPinLockoutEndTime() else 0L
         val dialog = PinEntryDialog.newInstance(PinEntryDialog.MODE_VERIFY, "Enter Security PIN", lockoutEndTime)
         dialog.setPinEntryListener(object : PinEntryDialog.PinEntryListener {
@@ -350,7 +377,13 @@ class MainActivity : AppCompatActivity() {
                         // Both factors succeeded!
                         Toast.makeText(this@MainActivity, "Two-factor authentication successful", Toast.LENGTH_SHORT).show()
                         dialog.dismiss()
-                        openFilePicker()
+                        // Hide security overlay after successful authentication
+                        binding.securityOverlay.visibility = View.GONE
+                        
+                        // Only open file picker if this authentication was for adding files
+                        if (openFilePickerAfterAuth) {
+                            openFilePicker()
+                        }
                     } else {
                         // PIN verification failed
                         val attemptsRemaining = AuthenticationManager.MAX_PIN_ATTEMPTS - authenticationManager.getPinFailedAttempts()
@@ -371,6 +404,8 @@ class MainActivity : AppCompatActivity() {
             
             override fun onPinCancelled() {
                 Toast.makeText(this@MainActivity, "Two-factor authentication cancelled", Toast.LENGTH_SHORT).show()
+                // Hide security overlay when authentication is cancelled
+                binding.securityOverlay.visibility = View.GONE
             }
         })
         dialog.show(supportFragmentManager, "pin_verify")
@@ -494,17 +529,28 @@ class MainActivity : AppCompatActivity() {
 
     internal fun deleteFile(file: File) {
         try {
-            // Use secure deletion
-            val deleted = secureDeleteFile(file)
-            if (deleted) {
-                loadEncryptedFiles()
-                Toast.makeText(this, "File securely deleted", Toast.LENGTH_SHORT).show()
+            if (file.isDirectory) {
+                // Handle directory deletion
+                val deleted = file.deleteRecursively()
+                if (deleted) {
+                    loadEncryptedFiles()
+                    Toast.makeText(this, "Folder deleted", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Failed to delete folder", Toast.LENGTH_SHORT).show()
+                }
             } else {
-                Toast.makeText(this, "Failed to delete file", Toast.LENGTH_SHORT).show()
+                // Use secure deletion for files
+                val deleted = secureDeleteFile(file)
+                if (deleted) {
+                    loadEncryptedFiles()
+                    Toast.makeText(this, "File securely deleted", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Failed to delete file", Toast.LENGTH_SHORT).show()
+                }
             }
         } catch (e: Exception) {
             // Security: Don't log sensitive information
-            Toast.makeText(this, "Error deleting file", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error deleting ${if (file.isDirectory) "folder" else "file"}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -531,13 +577,23 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         } catch (e: KeyPermanentlyInvalidatedException) {
-            handleKeyInvalidated()
+            // Check if this is a real key invalidation or just needs authentication
+            if (e.message?.contains("Key requires authentication") == true) {
+                // This is not a real invalidation, just needs biometric auth
+                Toast.makeText(this, "Authentication required to decrypt file", Toast.LENGTH_SHORT).show()
+                showTwoFactorAuthentication()
+            } else {
+                // This is a real key invalidation (biometric credentials changed)
+                handleKeyInvalidated()
+            }
             return null
         } catch (e: AEADBadTagException) {
             Toast.makeText(this, "Decryption failed: file may be corrupt or tampered with.", Toast.LENGTH_LONG).show()
             return null
         } catch (e: Exception) {
             // Security: Don't log sensitive information
+            android.util.Log.e("MainActivity", "Decryption error: ${e.javaClass.simpleName}", e)
+            Toast.makeText(this, "Error decrypting file: ${e.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
             return null
         }
     }
@@ -902,6 +958,92 @@ class MainActivity : AppCompatActivity() {
             .setMessage("A security violation has been detected. The app will now exit for your protection.")
             .setCancelable(false)
             .setPositiveButton("Exit") { _, _ ->
+                finishAffinity()
+            }
+            .show()
+    }
+
+    /**
+     * Check authentication status on every app launch
+     */
+    private fun checkAuthenticationOnLaunch() {
+        // Skip authentication check if this is first-time setup
+        if (authenticationManager.isFirstTimeSetup()) {
+            return
+        }
+        
+        // Check authentication status
+        val authStatus = authenticationManager.getAuthenticationStatus()
+        
+        when (authStatus) {
+            AuthenticationManager.AuthStatus.SETUP_REQUIRED -> {
+                // This shouldn't happen if PIN is already set, but handle it gracefully
+                if (authenticationManager.isPinSet()) {
+                    authenticationManager.forceAuthenticationRequired()
+                    showTwoFactorAuthentication()
+                } else {
+                    showPinSetupDialog()
+                }
+            }
+            AuthenticationManager.AuthStatus.LOCKED -> {
+                val remainingTime = maxOf(
+                    authenticationManager.getRemainingLockoutTime(),
+                    authenticationManager.getRemainingPinLockoutTime()
+                ) / 60000
+                Toast.makeText(this, "Authentication locked. Try again in $remainingTime minutes", Toast.LENGTH_LONG).show()
+            }
+            AuthenticationManager.AuthStatus.AUTH_REQUIRED -> {
+                // Authentication is required - show 2FA immediately
+                showTwoFactorAuthentication()
+            }
+            AuthenticationManager.AuthStatus.AUTHENTICATED -> {
+                // Force authentication on every app launch for security
+                // Even if within timeout period, require fresh authentication
+                authenticationManager.forceAuthenticationRequired()
+                showTwoFactorAuthentication()
+            }
+        }
+    }
+    
+    /**
+     * Check if this is the first time the app is opened and handle setup
+     */
+    private fun checkFirstTimeSetup() {
+        if (authenticationManager.isFirstTimeSetup()) {
+            // Check if biometric authentication is available
+            val biometricManager = BiometricManager.from(this)
+            val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            
+            when (canAuthenticate) {
+                BiometricManager.BIOMETRIC_SUCCESS -> {
+                    // Biometric is available, proceed with PIN setup
+                    showPinSetupDialog()
+                }
+                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
+                    showBiometricNotAvailableDialog("This device doesn't support biometric authentication.")
+                }
+                BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
+                    showBiometricNotAvailableDialog("Biometric authentication is currently unavailable.")
+                }
+                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                    showBiometricNotAvailableDialog("Please set up biometric authentication in your device settings.")
+                }
+                else -> {
+                    showBiometricNotAvailableDialog("Biometric authentication is not available on this device.")
+                }
+            }
+        }
+    }
+    
+    /**
+     * Show dialog when biometric authentication is not available
+     */
+    private fun showBiometricNotAvailableDialog(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Biometric Authentication Required")
+            .setMessage("$message\n\nThis app requires biometric authentication to ensure your files remain secure. Please set up biometric authentication in your device settings and restart the app.")
+            .setCancelable(false)
+            .setPositiveButton("Exit App") { _, _ ->
                 finishAffinity()
             }
             .show()

@@ -8,7 +8,7 @@ import android.security.keystore.KeyProperties
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.security.SecureRandom
-import de.mkammerer.argon2.Argon2Factory
+
 import android.annotation.SuppressLint
 
 /**
@@ -176,9 +176,10 @@ class AuthenticationManager private constructor(context: Context) {
         if (!isValidPin(pin)) {
             return PinSetupResult.INVALID_FORMAT
         }
-        if (isWeakPin(pin)) {
-            return PinSetupResult.WEAK_PIN
-        }
+        // Weak PIN check disabled - any 4-digit PIN is accepted
+        // if (isWeakPin(pin)) {
+        //     return PinSetupResult.WEAK_PIN
+        // }
         
         try {
             // Generate a random salt
@@ -190,16 +191,18 @@ class AuthenticationManager private constructor(context: Context) {
             
             // Store the hash and salt
             @SuppressLint("UseKtx")
-            encryptedPrefs.edit()
+            val editor = encryptedPrefs.edit()
                 .putString(KEY_PIN_HASH, pinHash)
                 .putString(KEY_PIN_SALT, android.util.Base64.encodeToString(salt, android.util.Base64.NO_WRAP))
                 .putBoolean(KEY_PIN_SET, true)
                 .putInt(KEY_PIN_ATTEMPTS, 0)
                 .remove(KEY_PIN_LOCKOUT)
-                .apply()
+            
+            val success = editor.commit() // Use commit() instead of apply() for immediate feedback
             
             return PinSetupResult.SUCCESS
         } catch (e: Exception) {
+            android.util.Log.e("AuthenticationManager", "Error during PIN setup", e)
             return PinSetupResult.ERROR
         }
     }
@@ -334,19 +337,18 @@ class AuthenticationManager private constructor(context: Context) {
     }
     
     /**
-     * Hash PIN with Argon2
+     * Hash PIN with PBKDF2-SHA256 (secure alternative to Argon2)
      */
     private fun hashPin(pin: String, salt: ByteArray): String {
-        val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
-        // Stronger parameters for Argon2
-        val hash = argon2.hash(
-            4, // iterations
-            131072, // 128 MB memory
-            2, // parallelism
+        val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        val spec = javax.crypto.spec.PBEKeySpec(
             pin.toCharArray(),
-            java.nio.charset.StandardCharsets.UTF_8
+            salt,
+            100000, // 100k iterations for security
+            256 // 256-bit key length
         )
-        return hash
+        val key = factory.generateSecret(spec)
+        return android.util.Base64.encodeToString(key.encoded, android.util.Base64.NO_WRAP)
     }
     
     /**
@@ -384,6 +386,13 @@ class AuthenticationManager private constructor(context: Context) {
     }
     
     /**
+     * Check if this is the first time the app is being set up
+     */
+    fun isFirstTimeSetup(): Boolean {
+        return !isPinSet()
+    }
+    
+    /**
      * Get authentication status for UI
      */
     fun getAuthenticationStatus(): AuthStatus {
@@ -393,6 +402,30 @@ class AuthenticationManager private constructor(context: Context) {
             isAuthenticationRequired() -> AuthStatus.AUTH_REQUIRED
             else -> AuthStatus.AUTHENTICATED
         }
+    }
+    
+    /**
+     * Get authentication status with debug logging
+     */
+    fun getAuthenticationStatusWithDebug(): AuthStatus {
+        val pinSet = isPinSet()
+        val authRequired = isAuthenticationRequired()
+        val locked = isAuthenticationLocked() || isPinLocked()
+        
+        return when {
+            !pinSet -> AuthStatus.SETUP_REQUIRED
+            locked -> AuthStatus.LOCKED
+            authRequired -> AuthStatus.AUTH_REQUIRED
+            else -> AuthStatus.AUTHENTICATED
+        }
+    }
+    
+    /**
+     * Force authentication required status (for testing and edge cases)
+     */
+    fun forceAuthenticationRequired() {
+        // Clear the last authentication timestamp to force re-authentication
+        encryptedPrefs.edit().remove(KEY_LAST_AUTH).apply()
     }
     
 

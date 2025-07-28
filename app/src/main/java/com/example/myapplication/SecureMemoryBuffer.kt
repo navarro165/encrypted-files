@@ -48,6 +48,7 @@ class SecureMemoryBuffer private constructor(
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(256)
                 .setUserAuthenticationRequired(false) // Memory encryption shouldn't require user auth
+                .setRandomizedEncryptionRequired(false) // Allow caller-provided IV
                 .build()
                 
             keyGenerator.init(keyGenParameterSpec)

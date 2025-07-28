@@ -50,7 +50,26 @@ class SecureKeyManager(context: Context) {
     }
 
     private fun getOrCreateMasterKey(): SecretKey {
-        return (keyStore.getKey(masterKeyAlias, null) as? SecretKey) ?: generateBiometricProtectedKey()
+        val existingKey = keyStore.getKey(masterKeyAlias, null) as? SecretKey
+        android.util.Log.d("SecureKeyManager", "Getting key for alias: $masterKeyAlias")
+        android.util.Log.d("SecureKeyManager", "Existing key: ${existingKey != null}")
+        android.util.Log.d("SecureKeyManager", "KeyStore contains alias: ${keyStore.containsAlias(masterKeyAlias)}")
+        
+        return if (existingKey != null) {
+            android.util.Log.d("SecureKeyManager", "Using existing key")
+            existingKey
+        } else {
+            // Only generate a new key if one doesn't exist
+            if (keyStore.containsAlias(masterKeyAlias)) {
+                // Key exists but we can't access it - this means authentication is required
+                android.util.Log.d("SecureKeyManager", "Key exists but requires authentication")
+                throw KeyPermanentlyInvalidatedException("Key requires authentication")
+            } else {
+                // No key exists, create a new one
+                android.util.Log.d("SecureKeyManager", "No key exists, generating new one")
+                generateBiometricProtectedKey()
+            }
+        }
     }
 
     /**

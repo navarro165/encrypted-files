@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ActivityFileViewerBinding
 import java.io.BufferedInputStream
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -182,6 +183,11 @@ class FileViewerActivity : AppCompatActivity() {
                 return
             }
 
+            // Show progress indicator
+            binding.progressBar.visibility = View.VISIBLE
+            binding.imageView.visibility = View.GONE
+            binding.textView.visibility = View.GONE
+
             // Use streaming decryption into a temporary byte array
             val decryptedBytes = ByteArrayOutputStream().use { outputStream ->
                 FileInputStream(file).use { fis ->
@@ -203,6 +209,9 @@ class FileViewerActivity : AppCompatActivity() {
                 outputStream.toByteArray()
             }
 
+            // Hide progress indicator
+            binding.progressBar.visibility = View.GONE
+
             // Immediately move the decrypted data into a secure buffer
             secureBuffer = SecureMemoryBuffer.create(decryptedBytes.size)
             secureBuffer?.write(decryptedBytes)
@@ -220,20 +229,32 @@ class FileViewerActivity : AppCompatActivity() {
                 } else {
                     binding.imageView.visibility = View.VISIBLE
                     binding.textView.visibility = View.GONE
+                    
+                    // Use ByteArrayInputStream for better Glide compatibility
+                    val inputStream = ByteArrayInputStream(data)
                     Glide.with(this)
-                        .load(data)
+                        .load(inputStream)
                         .into(binding.imageView)
                 }
             }
 
         } catch (e: KeyPermanentlyInvalidatedException) {
-            handleKeyInvalidated()
+            // Check if this is a real key invalidation or just needs authentication
+            if (e.message?.contains("Key requires authentication") == true) {
+                // This is not a real invalidation, just needs biometric auth
+                Toast.makeText(this, "Authentication required to view file", Toast.LENGTH_SHORT).show()
+                showTwoFactorAuthenticationForViewing(file)
+            } else {
+                // This is a real key invalidation (biometric credentials changed)
+                handleKeyInvalidated()
+            }
         } catch (e: AEADBadTagException) {
             Toast.makeText(this, "Decryption failed: file may be corrupt or tampered with.", Toast.LENGTH_LONG).show()
             finish()
         } catch (e: Exception) {
             // Security: Don't log sensitive information
-            Toast.makeText(this, "Error decrypting file", Toast.LENGTH_SHORT).show()
+            android.util.Log.e("FileViewerActivity", "Decryption error: ${e.javaClass.simpleName} - ${e.message}", e)
+            Toast.makeText(this, "Error decrypting file: ${e.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
             finish()
         }
     }

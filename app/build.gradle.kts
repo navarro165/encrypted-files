@@ -143,9 +143,11 @@ android {
         buildConfig = true
     }
     
+
+    
     testOptions {
         managedDevices {
-            devices {
+            allDevices {
                 create<com.android.build.api.dsl.ManagedVirtualDevice>("pixel2api30") {
                     device = "Pixel 2"
                     apiLevel = 30
@@ -177,7 +179,7 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.glide)
     implementation("androidx.documentfile:documentfile:1.1.0")
-    implementation("de.mkammerer:argon2-jvm:2.11")
+
     implementation("androidx.preference:preference-ktx:1.2.1")
 
     // Unit testing
