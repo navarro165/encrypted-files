@@ -25,10 +25,21 @@ class InfoActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = "App Information"
         
-        // Set up privacy policy link
-        binding.privacyPolicyTextView.setOnClickListener {
-            val privacyPolicyUrl = getString(R.string.privacy_policy_url)
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, privacyPolicyUrl.toUri())
+        // Set up GitHub link
+        binding.githubLinkTextView.setOnClickListener {
+            val githubUrl = "https://github.com/navarro165/encrypted-files/blob/main/README.md"
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, githubUrl.toUri())
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                android.widget.Toast.makeText(this, "No browser found", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        // Set up funding link
+        binding.fundingLinkTextView.setOnClickListener {
+            val fundingUrl = "https://buymeacoffee.com/navarro165"
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, fundingUrl.toUri())
             if (intent.resolveActivity(packageManager) != null) {
                 startActivity(intent)
             } else {

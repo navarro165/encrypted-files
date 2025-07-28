@@ -10,6 +10,7 @@ import com.example.myapplication.databinding.ItemFileBinding
 import java.io.File
 
 class FileAdapter(
+    private val mainActivity: MainActivity,
     private val onMultiSelect: (List<File>) -> Unit,
     private val onOpenFile: (File) -> Unit,
     private val onOpenFolder: (File) -> Unit
@@ -51,11 +52,35 @@ class FileAdapter(
         fun bind(file: File) {
             binding.textView.text = file.name
 
-            if (file.isDirectory) {
-                binding.imageView.visibility = View.VISIBLE
-                binding.imageView.setImageResource(android.R.drawable.ic_menu_gallery) // Placeholder for folder icon
+            // Check if file is pending import
+            val isPending = mainActivity.isFilePending(file.name)
+            
+            if (isPending) {
+                // Show pending files with lighter grey and encrypting indicator
+                binding.root.alpha = 0.7f
+                binding.textView.setTextColor(android.graphics.Color.parseColor("#888888")) // Lighter grey
+                binding.textView.text = "${file.name} (encrypting)"
+                binding.textView.setTypeface(null, android.graphics.Typeface.ITALIC)
+                if (file.isDirectory) {
+                    binding.imageView.visibility = View.VISIBLE
+                    binding.imageView.setImageResource(R.drawable.ic_folder)
+                    binding.imageView.setColorFilter(android.graphics.Color.parseColor("#888888"))
+                } else {
+                    binding.imageView.visibility = View.GONE
+                }
             } else {
-                binding.imageView.visibility = View.GONE
+                // Normal appearance for completed files
+                binding.root.alpha = 1.0f
+                binding.textView.text = file.name
+                binding.textView.setTypeface(null, android.graphics.Typeface.NORMAL)
+                // Use default theme text color (don't override)
+                if (file.isDirectory) {
+                    binding.imageView.visibility = View.VISIBLE
+                    binding.imageView.setImageResource(R.drawable.ic_folder)
+                    binding.imageView.clearColorFilter()
+                } else {
+                    binding.imageView.visibility = View.GONE
+                }
             }
 
             if (isMultiSelectMode) {
@@ -66,6 +91,11 @@ class FileAdapter(
             }
 
             binding.root.setOnClickListener {
+                // Don't allow interaction with pending files
+                if (isPending) {
+                    return@setOnClickListener
+                }
+                
                 if (isMultiSelectMode) {
                     if (selectedItems.contains(file)) {
                         selectedItems.remove(file)
@@ -84,6 +114,11 @@ class FileAdapter(
             }
 
             binding.root.setOnLongClickListener {
+                // Don't allow interaction with pending files
+                if (isPending) {
+                    return@setOnLongClickListener false
+                }
+                
                 if (!isMultiSelectMode) {
                     setMultiSelectMode(true)
                     selectedItems.add(file)

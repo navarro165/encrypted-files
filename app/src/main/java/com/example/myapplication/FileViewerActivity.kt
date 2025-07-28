@@ -9,10 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
-import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ActivityFileViewerBinding
 import java.io.BufferedInputStream
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileInputStream
@@ -174,89 +172,193 @@ class FileViewerActivity : AppCompatActivity() {
     }
 
     private fun decryptAndDisplayFile(file: File) {
-        try {
-            // Check file size limit for viewing (10MB for secure buffer)
-            val fileSize = file.length()
-            if (fileSize > 10 * 1024 * 1024) {
-                Toast.makeText(this, "File too large to display securely", Toast.LENGTH_SHORT).show()
-                finish()
-                return
-            }
+        // Check file size limit for viewing (10MB for secure buffer)
+        val fileSize = file.length()
+        if (fileSize > 10 * 1024 * 1024) {
+            Toast.makeText(this, "File too large to display securely", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
 
-            // Show progress indicator
+        // For very small files (< 1KB), we can optimize further
+        val isSmallFile = fileSize < 1024
+
+        // Show progress indicator with better feedback
+        runOnUiThread {
             binding.progressBar.visibility = View.VISIBLE
             binding.imageView.visibility = View.GONE
             binding.textView.visibility = View.GONE
+            
+            // Add a text indicator for better UX
+            if (binding.textView.visibility == View.GONE) {
+                binding.textView.visibility = View.VISIBLE
+                binding.textView.text = "Decrypting file...\n\nFile: ${file.name}\nSize: ${formatFileSize(fileSize)}"
+            }
+        }
 
-            // Use streaming decryption into a temporary byte array
-            val decryptedBytes = ByteArrayOutputStream().use { outputStream ->
+        // Move decryption to background thread to prevent ANR
+        Thread {
+            try {
+                // Check if file exists and has content
+                if (!file.exists()) {
+                    throw Exception("File does not exist")
+                }
+                
+                val fileSize = file.length()
+                if (fileSize <= 12) { // Only IV or empty file
+                    throw Exception("File is too small or corrupted (size: $fileSize bytes)")
+                }
+                
+                android.util.Log.d("FileViewerActivity", "Starting decryption of ${file.name} (${fileSize} bytes)")
+                            // Optimized streaming decryption with progress updates
+            val decryptedBytes = if (isSmallFile) {
+                // For small files, read everything at once for maximum speed
                 FileInputStream(file).use { fis ->
                     val iv = ByteArray(12)
-                    fis.read(iv)
+                    val ivBytesRead = fis.read(iv)
+                    if (ivBytesRead != 12) {
+                        throw Exception("Failed to read IV: expected 12 bytes, got $ivBytesRead")
+                    }
+                    
+                    android.util.Log.d("FileViewerActivity", "Read IV: ${iv.size} bytes")
                     
                     val cipher = secureKeyManager.getDecryptionCipher(iv)
+                    val encryptedData = fis.readBytes()
                     
-                    BufferedInputStream(fis).use { bufferedInput ->
-                        CipherInputStream(bufferedInput, cipher).use { cipherInput ->
-                            val buffer = ByteArray(8192)
-                            var bytesRead: Int
-                            while (cipherInput.read(buffer).also { bytesRead = it } != -1) {
-                                outputStream.write(buffer, 0, bytesRead)
+                    android.util.Log.d("FileViewerActivity", "Read encrypted data: ${encryptedData.size} bytes")
+                    
+                    // Decrypt in one operation for small files
+                    cipher.doFinal(encryptedData)
+                }
+            } else {
+                // For larger files, use streaming with progress updates
+                ByteArrayOutputStream().use { outputStream ->
+                    FileInputStream(file).use { fis ->
+                        val iv = ByteArray(12)
+                        val ivBytesRead = fis.read(iv)
+                        if (ivBytesRead != 12) {
+                            throw Exception("Failed to read IV: expected 12 bytes, got $ivBytesRead")
+                        }
+                        
+                        android.util.Log.d("FileViewerActivity", "Read IV: ${iv.size} bytes")
+                        
+                        val cipher = secureKeyManager.getDecryptionCipher(iv)
+                        
+                        // Use optimized buffer size for better performance (64KB - good balance)
+                        // For larger files, we can use parallel processing for I/O operations
+                        val bufferSize = if (fileSize > 5 * 1024 * 1024) {
+                            131072 // 128KB for very large files
+                        } else {
+                            65536  // 64KB for normal files
+                        }
+                        
+                        BufferedInputStream(fis, bufferSize).use { bufferedInput ->
+                            CipherInputStream(bufferedInput, cipher).use { cipherInput ->
+                                val buffer = ByteArray(bufferSize)
+                                var bytesRead: Int
+                                var totalBytesRead = 0L
+                                
+                                while (cipherInput.read(buffer).also { bytesRead = it } != -1) {
+                                    outputStream.write(buffer, 0, bytesRead)
+                                    totalBytesRead += bytesRead
+                                    
+                                    // Update progress every 500KB for better performance
+                                    if (totalBytesRead % (500 * 1024) == 0L) {
+                                        val progress = ((totalBytesRead.toFloat() / fileSize) * 100).toInt()
+                                        runOnUiThread {
+                                            binding.textView.text = "Decrypting file... ${progress}%\n\nFile: ${file.name}\nSize: ${formatFileSize(fileSize)}\nProgress: ${formatFileSize(totalBytesRead)} / ${formatFileSize(fileSize)}"
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                }
-                outputStream.toByteArray()
-            }
-
-            // Hide progress indicator
-            binding.progressBar.visibility = View.GONE
-
-            // Immediately move the decrypted data into a secure buffer
-            secureBuffer = SecureMemoryBuffer.create(decryptedBytes.size)
-            secureBuffer?.write(decryptedBytes)
-
-            // Securely wipe the temporary byte array
-            java.util.Arrays.fill(decryptedBytes, 0.toByte())
-
-            // Use the data from the secure buffer and wipe it afterwards
-            secureBuffer?.withDecryptedData { data ->
-                val fileName = file.name
-                if (fileName.endsWith(".txt") || fileName.endsWith(".log")) {
-                    binding.imageView.visibility = View.GONE
-                    binding.textView.visibility = View.VISIBLE
-                    binding.textView.text = String(data)
-                } else {
-                    binding.imageView.visibility = View.VISIBLE
-                    binding.textView.visibility = View.GONE
-                    
-                    // Use ByteArrayInputStream for better Glide compatibility
-                    val inputStream = ByteArrayInputStream(data)
-                    Glide.with(this)
-                        .load(inputStream)
-                        .into(binding.imageView)
+                    outputStream.toByteArray()
                 }
             }
 
-        } catch (e: KeyPermanentlyInvalidatedException) {
-            // Check if this is a real key invalidation or just needs authentication
-            if (e.message?.contains("Key requires authentication") == true) {
-                // This is not a real invalidation, just needs biometric auth
-                Toast.makeText(this, "Authentication required to view file", Toast.LENGTH_SHORT).show()
-                showTwoFactorAuthenticationForViewing(file)
-            } else {
-                // This is a real key invalidation (biometric credentials changed)
-                handleKeyInvalidated()
+                // Move back to UI thread for display
+                runOnUiThread {
+                    try {
+                        // Hide progress indicator
+                        binding.progressBar.visibility = View.GONE
+
+                        // Immediately move the decrypted data into a secure buffer
+                        secureBuffer = SecureMemoryBuffer.create(decryptedBytes.size)
+                        secureBuffer?.write(decryptedBytes)
+
+                        // Securely wipe the temporary byte array
+                        java.util.Arrays.fill(decryptedBytes, 0.toByte())
+
+                        // Use the data from the secure buffer and wipe it afterwards
+                        secureBuffer?.withDecryptedData { data ->
+                            val fileName = file.name.lowercase()
+                            if (fileName.endsWith(".txt") || fileName.endsWith(".log") || fileName.endsWith(".md")) {
+                                // Text files
+                                binding.imageView.visibility = View.GONE
+                                binding.textView.visibility = View.VISIBLE
+                                binding.textView.text = String(data)
+                            } else if (isImageFile(fileName)) {
+                                // Image files
+                                binding.imageView.visibility = View.VISIBLE
+                                binding.textView.visibility = View.GONE
+                                
+                                // Use BitmapFactory for better control over image loading
+                                try {
+                                    val bitmap = android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size)
+                                    if (bitmap != null) {
+                                        binding.imageView.setImageBitmap(bitmap)
+                                    } else {
+                                        throw Exception("Failed to decode image")
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("FileViewerActivity", "Failed to load image: ${e.message}")
+                                    binding.imageView.setImageResource(R.drawable.ic_launcher_foreground)
+                                    Toast.makeText(this@FileViewerActivity, "Failed to display image", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                // Unknown file type - show as text if possible
+                                binding.imageView.visibility = View.GONE
+                                binding.textView.visibility = View.VISIBLE
+                                binding.textView.text = "Binary file (${data.size} bytes)\n\nPreview not available for this file type."
+                            }
+                        }
+                    } catch (e: Exception) {
+                        binding.progressBar.visibility = View.GONE
+                        android.util.Log.e("FileViewerActivity", "Error displaying file: ${e.javaClass.simpleName}", e)
+                        Toast.makeText(this@FileViewerActivity, "Error displaying file: ${e.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                }
+
+            } catch (e: KeyPermanentlyInvalidatedException) {
+                runOnUiThread {
+                    // Check if this is a real key invalidation or just needs authentication
+                    if (e.message?.contains("Key requires authentication") == true) {
+                        // This is not a real invalidation, just needs biometric auth
+                        Toast.makeText(this@FileViewerActivity, "Authentication required to view file", Toast.LENGTH_SHORT).show()
+                        showTwoFactorAuthenticationForViewing(file)
+                    } else {
+                        // This is a real key invalidation (biometric credentials changed)
+                        handleKeyInvalidated()
+                    }
+                }
+            } catch (e: AEADBadTagException) {
+                runOnUiThread {
+                    binding.progressBar.visibility = View.GONE
+                    Toast.makeText(this@FileViewerActivity, "Decryption failed: file may be corrupt or tampered with.", Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    binding.progressBar.visibility = View.GONE
+                    // Security: Don't log sensitive information
+                    android.util.Log.e("FileViewerActivity", "Decryption error: ${e.javaClass.simpleName} - ${e.message}", e)
+                    Toast.makeText(this@FileViewerActivity, "Error decrypting file: ${e.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
             }
-        } catch (e: AEADBadTagException) {
-            Toast.makeText(this, "Decryption failed: file may be corrupt or tampered with.", Toast.LENGTH_LONG).show()
-            finish()
-        } catch (e: Exception) {
-            // Security: Don't log sensitive information
-            android.util.Log.e("FileViewerActivity", "Decryption error: ${e.javaClass.simpleName} - ${e.message}", e)
-            Toast.makeText(this, "Error decrypting file: ${e.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
-            finish()
-        }
+        }.start()
     }
     
     private fun handleKeyInvalidated() {
@@ -302,6 +404,28 @@ class FileViewerActivity : AppCompatActivity() {
         // Stop RASP monitoring if initialized
         if (::raspMonitor.isInitialized) {
             raspMonitor.stopMonitoring()
+        }
+    }
+
+    /**
+     * Check if the file is an image based on its extension
+     */
+    private fun isImageFile(fileName: String): Boolean {
+        val imageExtensions = setOf(
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif"
+        )
+        return imageExtensions.any { fileName.endsWith(it) }
+    }
+
+    /**
+     * Format file size in human-readable format
+     */
+    private fun formatFileSize(bytes: Long): String {
+        return when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+            bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
+            else -> "${bytes / (1024 * 1024 * 1024)} GB"
         }
     }
 }

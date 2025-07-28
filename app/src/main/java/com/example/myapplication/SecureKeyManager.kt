@@ -49,7 +49,7 @@ class SecureKeyManager(context: Context) {
         return alias
     }
 
-    private fun getOrCreateMasterKey(): SecretKey {
+    fun getOrCreateMasterKey(): SecretKey {
         val existingKey = keyStore.getKey(masterKeyAlias, null) as? SecretKey
         android.util.Log.d("SecureKeyManager", "Getting key for alias: $masterKeyAlias")
         android.util.Log.d("SecureKeyManager", "Existing key: ${existingKey != null}")

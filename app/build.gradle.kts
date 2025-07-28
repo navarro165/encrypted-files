@@ -179,6 +179,10 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.glide)
     implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    
+    // LocalBroadcastManager for reliable in-app communication
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     implementation("androidx.preference:preference-ktx:1.2.1")
 
@@ -191,6 +195,7 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:4.0.0")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("androidx.work:work-testing:2.9.0")
 
     // Instrumentation testing
     androidTestImplementation(libs.androidx.junit)

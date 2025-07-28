@@ -9,54 +9,30 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:gravity="center">
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textStyle="bold"
-            android:textSize="20sp"
-            android:text="@string/how_app_works_title" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/how_app_works_description" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textStyle="bold"
-            android:textSize="20sp"
-            android:text="@string/basic_instructions_title" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/basic_instructions_description" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textStyle="bold"
-            android:textSize="20sp"
-            android:text="@string/architecture_security_title" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/architecture_security_description" />
-
-        <TextView
-            android:id="@+id/privacyPolicyTextView"
+            android:id="@+id/githubLinkTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/privacy_policy"
+            android:text="📖 Source / Instructions"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground"
+            android:padding="24dp"
+            android:textSize="18sp"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Button" />
+
+        <TextView
+            android:id="@+id/fundingLinkTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="☕ Support Development"
             android:textColor="?attr/colorPrimary"
             android:layout_marginTop="24dp"
             android:gravity="center"
@@ -64,7 +40,8 @@
             android:clickable="true"
             android:focusable="true"
             android:background="?attr/selectableItemBackground"
-            android:padding="16dp"
+            android:padding="24dp"
+            android:textSize="18sp"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Button" />
 
     </LinearLayout>

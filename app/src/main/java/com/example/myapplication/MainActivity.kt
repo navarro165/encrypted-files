@@ -49,9 +49,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var raspMonitor: RASPMonitor
     private var actionMode: ActionMode? = null
     private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var importCompletedReceiver: android.content.BroadcastReceiver
+    private val pendingImports = mutableSetOf<String>() // Track pending imports by filename
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        android.util.Log.d("MainActivity", "onCreate started")
         super.onCreate(savedInstanceState)
+        android.util.Log.d("MainActivity", "super.onCreate completed")
+        
+        android.util.Log.d("MainActivity", "About to create notification channel")
+        // Create notification channel for background exports
+        createNotificationChannel()
+        android.util.Log.d("MainActivity", "Notification channel created")
+        
+        android.util.Log.d("MainActivity", "About to initialize import receiver")
+        // Initialize import completion receiver
+        initializeImportReceiver()
+        android.util.Log.d("MainActivity", "Import receiver initialized")
         
         // Anti-screenshot protection
         window.setFlags(
@@ -59,15 +73,21 @@ class MainActivity : AppCompatActivity() {
             WindowManager.LayoutParams.FLAG_SECURE
         )
         
+        android.util.Log.d("MainActivity", "About to initialize security manager")
         // Initialize security components first
         securityManager = SecurityManager.getInstance(this)
+        android.util.Log.d("MainActivity", "Security manager initialized")
         
+        android.util.Log.d("MainActivity", "About to perform security check")
         // Perform comprehensive security check
         val securityResult = securityManager.performSecurityCheck()
+        android.util.Log.d("MainActivity", "Security check result: ${securityResult.isSecure}")
         if (!securityResult.isSecure) {
+            android.util.Log.e("MainActivity", "Security violation detected, returning early")
             handleSecurityViolation(securityResult.violations)
             return
         }
+        android.util.Log.d("MainActivity", "Security check passed, continuing")
         
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -103,6 +123,7 @@ class MainActivity : AppCompatActivity() {
         currentDir = rootDir
 
         fileAdapter = FileAdapter(
+            mainActivity = this,
             onMultiSelect = { selectedFiles ->
                 if (selectedFiles.isNotEmpty()) {
                     if (actionMode == null) {
@@ -144,8 +165,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.button.setOnClickListener {
-            checkAuthenticationAndOpenFilePicker()
+        // Set up FAB click handler
+        binding.fab.setOnClickListener {
+            val options = arrayOf("Add Files", "Create Folder")
+            AlertDialog.Builder(this)
+                .setTitle("Select Action")
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0 -> checkAuthenticationAndOpenFilePicker()
+                        1 -> showCreateFolderDialog()
+                    }
+                }
+                .show()
         }
 
         // Check for first-time setup and biometric verification
@@ -155,6 +186,11 @@ class MainActivity : AppCompatActivity() {
         checkAuthenticationOnLaunch()
         
         loadEncryptedFiles()
+        
+        // Register import completion receiver
+        android.util.Log.d("MainActivity", "About to register import receiver")
+        registerImportReceiver()
+        android.util.Log.d("MainActivity", "Import receiver registration completed")
     }
     
     override fun onDestroy() {
@@ -166,6 +202,80 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: UninitializedPropertyAccessException) {
             // raspMonitor was not initialized, safe to ignore
+        }
+        
+        // Shutdown parallel decryption manager
+        ParallelDecryptionManager.getInstance(this).shutdown()
+        
+        // Unregister import receiver
+        unregisterImportReceiver()
+    }
+    
+    private fun createNotificationChannel() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val notificationManager = getSystemService(android.app.NotificationManager::class.java)
+            
+            // Export channel
+            val exportChannel = android.app.NotificationChannel(
+                "export_channel",
+                "File Export",
+                android.app.NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows progress for file exports"
+                setShowBadge(false)
+            }
+            notificationManager.createNotificationChannel(exportChannel)
+            
+            // Import channel
+            val importChannel = android.app.NotificationChannel(
+                "import_channel",
+                "File Import",
+                android.app.NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Shows progress for file imports"
+                setShowBadge(false)
+            }
+            notificationManager.createNotificationChannel(importChannel)
+        }
+    }
+    
+    private fun initializeImportReceiver() {
+        importCompletedReceiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+                if (intent?.action == "com.example.myapplication.IMPORT_COMPLETED_LOCAL") {
+                    android.util.Log.d("MainActivity", "Import completion notification received, refreshing file list")
+                    // Clear pending imports and refresh the file list when import completes
+                    runOnUiThread {
+                        android.util.Log.d("MainActivity", "Clearing pending imports, count before: ${pendingImports.size}")
+                        pendingImports.clear()
+                        android.util.Log.d("MainActivity", "Pending imports cleared, count after: ${pendingImports.size}")
+                        refreshFileListWithPendingState()
+                        fileAdapter.notifyDataSetChanged() // Force refresh
+                        Toast.makeText(this@MainActivity, "File list refreshed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun registerImportReceiver() {
+        // Register for local broadcasts only (more reliable for in-app communication)
+        try {
+            val localFilter = android.content.IntentFilter("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .registerReceiver(importCompletedReceiver, localFilter)
+            android.util.Log.d("MainActivity", "Import completion receiver registered")
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Failed to register import completion receiver: ${e.message}")
+        }
+    }
+    
+    private fun unregisterImportReceiver() {
+        try {
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .unregisterReceiver(importCompletedReceiver)
+        } catch (e: Exception) {
+            // Receiver might not be registered
         }
     }
 
@@ -462,47 +572,63 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun encryptAndSaveFile(uri: Uri) {
-        try {
-            val originalFileName = getFileName(uri)
-            val file = File(currentDir, originalFileName)
-            
-            val cipher = secureKeyManager.getEncryptionCipher()
-            val iv = cipher.iv
-
-            // Use streaming encryption for memory efficiency
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                FileOutputStream(file).use { outputStream ->
-                    // Prepend IV to the file
-                    outputStream.write(iv)
-
-                    BufferedInputStream(inputStream, 8192).use { bufferedInput ->
-                        BufferedOutputStream(outputStream, 8192).use { bufferedOutput ->
-                            CipherOutputStream(bufferedOutput, cipher).use { cipherOutput ->
-                                val buffer = ByteArray(8192)
-                                var bytesRead: Int
-                                while (bufferedInput.read(buffer).also { bytesRead = it } != -1) {
-                                    cipherOutput.write(buffer, 0, bytesRead)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            loadEncryptedFiles()
-            showDeleteOriginalFileDialog(uri)
-            
-        } catch (e: KeyPermanentlyInvalidatedException) {
-            handleKeyInvalidated()
-        } catch (e: Exception) {
-            // Security: Don't log sensitive information
-            Toast.makeText(this, "Error encrypting file", Toast.LENGTH_SHORT).show()
+        val originalFileName = getFileName(uri)
+        if (originalFileName != null) {
+            startBackgroundImport(uri, originalFileName)
+        } else {
+            Toast.makeText(this, "Could not get filename", Toast.LENGTH_SHORT).show()
         }
+    }
+    
+    private fun startBackgroundImport(uri: Uri, filename: String) {
+        // Add to pending imports and refresh UI immediately
+        pendingImports.add(filename)
+        refreshFileListWithPendingState()
+        
+        // Show background import notification
+        Toast.makeText(this, "Import started in background", Toast.LENGTH_SHORT).show()
+        
+        // Start background import using WorkManager
+        val workRequest = ImportWorker.createWorkRequest(
+            sourceUri = uri.toString(),
+            filename = filename
+        )
+        
+        androidx.work.WorkManager.getInstance(applicationContext)
+            .enqueue(workRequest)
     }
 
     internal fun loadEncryptedFiles() {
         val files = currentDir.listFiles()?.toList() ?: emptyList()
+        android.util.Log.d("MainActivity", "loadEncryptedFiles: Found ${files.size} files in ${currentDir.absolutePath}")
+        files.forEach { file ->
+            android.util.Log.d("MainActivity", "loadEncryptedFiles: File: ${file.name} (${file.length()} bytes)")
+        }
         fileAdapter.submitList(files)
+    }
+    
+    private fun refreshFileListWithPendingState() {
+        val actualFiles = currentDir.listFiles()?.toList() ?: emptyList()
+        val allFiles = mutableListOf<File>()
+        
+        // Add actual files
+        allFiles.addAll(actualFiles)
+        
+        // Add pending files that don't exist yet
+        pendingImports.forEach { pendingFilename ->
+            if (!actualFiles.any { it.name == pendingFilename }) {
+                // Create a placeholder file for pending imports
+                val pendingFile = File(currentDir, pendingFilename)
+                allFiles.add(pendingFile)
+            }
+        }
+        
+        android.util.Log.d("MainActivity", "refreshFileListWithPendingState: ${actualFiles.size} actual files, ${pendingImports.size} pending files")
+        fileAdapter.submitList(allFiles)
+    }
+    
+    fun isFilePending(filename: String): Boolean {
+        return pendingImports.contains(filename)
     }
 
     internal fun showDeleteConfirmationDialog(file: File) {
@@ -516,15 +642,18 @@ class MainActivity : AppCompatActivity() {
         builder.show()
     }
 
-    internal fun showDeleteOriginalFileDialog(uri: Uri) {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Delete Original File")
-        builder.setMessage("Do you want to delete the original file?")
-        builder.setPositiveButton("Yes") { _, _ ->
-            contentResolver.delete(uri, null, null)
-        }
-        builder.setNegativeButton("No", null)
-        builder.show()
+
+
+    /**
+     * Shows a small, unobtrusive reminder that the original file persists
+     */
+    private fun showOriginalFileReminder() {
+        // Show a small toast with reminder about original file
+        Toast.makeText(
+            this, 
+            "Note: Original file remains in its location. Delete manually if needed.", 
+            Toast.LENGTH_LONG
+        ).show()
     }
 
     internal fun deleteFile(file: File) {
@@ -726,33 +855,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val exportResultLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
-        uri?.let {
-            fileAdapter.getSelectedItems().forEach { file ->
-                var secureBuffer: SecureMemoryBuffer? = null
-                try {
-                    val decryptedBytes = decryptFile(file)
-                    if (decryptedBytes != null) {
-                        // Move to secure buffer
-                        secureBuffer = SecureMemoryBuffer.create(decryptedBytes.size)
-                        secureBuffer.write(decryptedBytes)
-                        java.util.Arrays.fill(decryptedBytes, 0.toByte()) // Wipe temp array
-
-                        // Use from secure buffer for writing to output stream
-                        secureBuffer.withDecryptedData { data ->
-                            contentResolver.openOutputStream(it.buildUpon().appendPath(file.name).build())?.use {
-                                it.write(data)
-                            }
-                        }
-                        Toast.makeText(this, "Exported ${file.name}", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    // Security: Don't log sensitive information
-                    Toast.makeText(this, "Error exporting ${file.name}", Toast.LENGTH_SHORT).show()
-                } finally {
-                    secureBuffer?.destroy()
-                }
-            }
+        uri?.let { exportUri ->
+            val selectedFiles = fileAdapter.getSelectedItems().toList()
+            
+            // Immediately return to main view - no delay
             actionMode?.finish()
+            
+            // Show background export notification
+            Toast.makeText(this, "Export started in background", Toast.LENGTH_SHORT).show()
+            
+            // Start background export using WorkManager
+            val filePaths = selectedFiles.map { it.absolutePath }
+            val workRequest = ExportWorker.createWorkRequest(
+                exportUri = exportUri.toString(),
+                filePaths = filePaths,
+                fileCount = selectedFiles.size
+            )
+            
+            androidx.work.WorkManager.getInstance(applicationContext)
+                .enqueue(workRequest)
         }
     }
 
@@ -763,10 +884,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_create_folder -> {
-                showCreateFolderDialog()
-                true
-            }
             R.id.action_info -> {
                 startActivity(Intent(this, InfoActivity::class.java))
                 true
@@ -788,7 +905,15 @@ class MainActivity : AppCompatActivity() {
                 val newFolder = File(currentDir, folderName)
                 // Security: Ensure path stays within app directory
                 if (isWithinAppDirectory(newFolder) && !newFolder.exists()) {
+                    // Add to pending state immediately
+                    pendingImports.add(folderName)
+                    refreshFileListWithPendingState()
+                    
+                    // Create the folder
                     newFolder.mkdir()
+                    
+                    // Remove from pending and refresh
+                    pendingImports.remove(folderName)
                     loadEncryptedFiles()
                     Toast.makeText(this, "Folder created", Toast.LENGTH_SHORT).show()
                 } else if (!isWithinAppDirectory(newFolder)) {
@@ -869,7 +994,14 @@ class MainActivity : AppCompatActivity() {
                     return true
                 }
                 R.id.action_export -> {
-                    exportResultLauncher.launch("exported_files")
+                    val selectedItems = fileAdapter.getSelectedItems()
+                    if (selectedItems.size == 1) {
+                        // Use the original filename for export
+                        exportResultLauncher.launch(selectedItems[0].name)
+                    } else {
+                        // For multiple files, use a descriptive name
+                        exportResultLauncher.launch("exported_files")
+                    }
                     return true
                 }
                 R.id.action_rename -> {
@@ -1048,6 +1180,7 @@ class MainActivity : AppCompatActivity() {
             }
             .show()
     }
+    
 }
 
 
