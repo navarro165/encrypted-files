@@ -7,7 +7,7 @@ This app uses advanced security measures:
 ### Encryption
 - **AES-256-GCM** encryption with hardware-backed keys
 - **Android Keystore** integration for secure key storage
-- **Argon2id** PIN hashing with enhanced memory-hard parameters
+- **PBKDF2-SHA256** PIN hashing with 500,000 iterations for high security
 - **Cryptographically secure** random number generation
 
 ### Authentication
@@ -19,7 +19,7 @@ This app uses advanced security measures:
   - PIN: 1-hour lockout after 3 failed attempts
 - **Hardware-backed** security with Android Keystore integration
 - **Authentication invalidation** on biometric enrollment changes
-- **PIN security**: Argon2id hashing with 4 iterations, 128MB memory, 2 parallelism threads
+- **PIN security**: PBKDF2-SHA256 hashing with 500,000 iterations for high security
 
 ### Storage
 - **App sandbox** isolation with no external storage access
@@ -41,9 +41,9 @@ This app uses advanced security measures:
 - **Advanced filename protection**: Prevents path traversal, reserved names, and malicious characters
 - **Enhanced memory security**: Encrypted memory buffers with 5-pass secure wiping
 - **Improved code obfuscation**: Full SecurityManager obfuscation in release builds
-- **Comprehensive testing**: 121 total tests with 97 security-focused unit tests
+- **Comprehensive testing**: Extensive security-focused unit and instrumentation tests
 - **RASP monitoring**: Real-time threat detection every 10 seconds with emergency response
-- **Argon2id hashing**: Memory-hard PIN protection with 128MB memory usage
+- **PBKDF2-SHA256 hashing**: High-iteration PIN protection with 500k iterations
 
 ## Security Features
 

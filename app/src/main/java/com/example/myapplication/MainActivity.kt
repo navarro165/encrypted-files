@@ -212,7 +212,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun createNotificationChannel() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(android.app.NotificationManager::class.java)
             
             // Export channel
@@ -241,7 +241,7 @@ class MainActivity : AppCompatActivity() {
     
     private fun initializeImportReceiver() {
         importCompletedReceiver = object : android.content.BroadcastReceiver() {
-            override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            override fun onReceive(context: android.content.Context?, intent: Intent?) {
                 if (intent?.action == "com.example.myapplication.IMPORT_COMPLETED_LOCAL") {
                     android.util.Log.d("MainActivity", "Import completion notification received, refreshing file list")
                     // Clear pending imports and refresh the file list when import completes

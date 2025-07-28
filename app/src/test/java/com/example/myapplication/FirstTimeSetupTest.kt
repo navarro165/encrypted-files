@@ -287,7 +287,7 @@ class FirstTimeSetupTest {
 
     // Helper methods that mirror the actual implementation logic
     private fun isValidPin(pin: String?): Boolean {
-        return pin?.length == 4 && pin?.all { it.isDigit() } == true
+        return pin?.length == 4 && pin.all { it.isDigit() } == true
     }
     
     private fun isWeakPin(pin: String): Boolean {

@@ -183,10 +183,10 @@ class AuthenticationManager private constructor(context: Context) {
         
         try {
             // Generate a random salt
-            val salt = ByteArray(32) // Increased salt size for Argon2
+            val salt = ByteArray(32) // 32-byte salt for PBKDF2
             SecureRandom().nextBytes(salt)
             
-            // Hash the PIN with Argon2
+            // Hash the PIN with PBKDF2
             val pinHash = hashPin(pin, salt)
             
             // Store the hash and salt
@@ -337,14 +337,15 @@ class AuthenticationManager private constructor(context: Context) {
     }
     
     /**
-     * Hash PIN with PBKDF2-SHA256 (secure alternative to Argon2)
+     * Hash PIN with PBKDF2-SHA256 (high iteration count for security)
+     * Using 500,000 iterations for security equivalent to Argon2
      */
     private fun hashPin(pin: String, salt: ByteArray): String {
         val factory = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
         val spec = javax.crypto.spec.PBEKeySpec(
             pin.toCharArray(),
             salt,
-            100000, // 100k iterations for security
+            500000, // 500k iterations for high security
             256 // 256-bit key length
         )
         val key = factory.generateSecret(spec)

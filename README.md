@@ -34,7 +34,7 @@ This app uses advanced security measures designed to resist attacks:
 - **AES-256-GCM** encryption with hardware-backed keys
 - **Two-Factor Authentication**: Biometric + PIN required together
 - **Android Keystore** integration with hardware attestation
-- **Argon2id** PIN hashing with memory-hard parameters
+- **PBKDF2-SHA256** PIN hashing with 500,000 iterations for high security
 - **App sandbox** isolation with no external storage access
 - **Secure deletion** with multi-pass overwrite
 
@@ -60,18 +60,11 @@ This application has undergone comprehensive security auditing by cybersecurity 
 - **Input validation assessment**: Path traversal and injection prevention
 - **Build security review**: ProGuard obfuscation and dependency analysis
 
-### 🛡️ **Security Rating: 9.5/10**
-- Exceeds enterprise security standards
-- Suitable for protecting highly sensitive data
-- Resistant to advanced persistent threats
-- Zero known security vulnerabilities
-
 ### 🧪 **Testing Coverage**
-- **121 total tests** (97 unit tests + 24 instrumentation tests)
 - **Comprehensive security testing** covering all attack vectors
 - **Integration testing** for end-to-end security flows
 - **Penetration testing** against common attack patterns
-- **12 specialized security test suites** for critical components
+- **Specialized security test suites** for critical components
 
 ## Getting Started
 

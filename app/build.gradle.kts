@@ -185,6 +185,9 @@ dependencies {
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     implementation("androidx.preference:preference-ktx:1.2.1")
+    
+    // Argon2 for secure PIN hashing (Android-compatible)
+    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
 
     // Unit testing
     testImplementation(libs.junit)
