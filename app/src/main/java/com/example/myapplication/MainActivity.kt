@@ -838,18 +838,8 @@ class MainActivity : AppCompatActivity() {
             // Use getLastPathSegment() instead of path manipulation
             // This prevents path traversal attacks by using Android's safe path extraction
             result = uri.lastPathSegment
-            if (result == null) {
-                // Fallback: extract filename from path but with additional security checks
-                val path = uri.path
-                if (path != null && path.isNotEmpty()) {
-                    val cut = path.lastIndexOf('/')
-                    if (cut != -1 && cut < path.length - 1) {
-                        result = path.substring(cut + 1)
-                    } else if (cut == -1 && path.isNotEmpty()) {
-                        result = path
-                    }
-                }
-            }
+            // If lastPathSegment is null, we cannot safely extract a filename
+            // This is better than using unsafe path manipulation
         }
         return sanitizeFileName(result ?: "unknown_file")
     }
