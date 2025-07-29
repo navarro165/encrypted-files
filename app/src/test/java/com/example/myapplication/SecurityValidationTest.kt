@@ -77,15 +77,18 @@ class SecurityValidationTest {
         
         // Key sizes - test with actual values
         val keySize = 256 // bits
-        assertTrue("Should use NIST recommended key size", keySize >= 128)
+        val minKeySize = 128
+        assertTrue("Should use NIST recommended key size", keySize >= minKeySize)
         
         // IV sizes for GCM - test with actual values
         val ivSize = 12 // bytes (96 bits)
-        assertEquals("Should use NIST recommended IV size for GCM", 12, ivSize)
+        val expectedIvSize = 12
+        assertEquals("Should use NIST recommended IV size for GCM", expectedIvSize, ivSize)
         
         // Authentication tag size - test with actual values
         val tagSize = 128 // bits (16 bytes)
-        assertEquals("Should use maximum authentication tag size", 128, tagSize)
+        val expectedTagSize = 128
+        assertEquals("Should use maximum authentication tag size", expectedTagSize, tagSize)
     }
 
     @Test
@@ -97,11 +100,15 @@ class SecurityValidationTest {
         val memoryKB = 131072 // 128 MB
         val saltSize = 32 // bytes
         
+        val minIterations = 3
+        val minMemoryKB = 65536
+        val minSaltSize = 16
+        
         assertTrue("Should use Argon2", algorithm.contains("Argon2"))
         assertTrue("Should use id variant", algorithm.contains("id"))
-        assertTrue("Should use adequate iterations", iterations >= 3) // More realistic test
-        assertTrue("Should use adequate memory", memoryKB >= 65536) // More realistic test
-        assertTrue("Should use adequate salt size", saltSize >= 16) // More realistic test
+        assertTrue("Should use adequate iterations", iterations >= minIterations)
+        assertTrue("Should use adequate memory", memoryKB >= minMemoryKB)
+        assertTrue("Should use adequate salt size", saltSize >= minSaltSize)
     }
 
     @Test
@@ -111,21 +118,24 @@ class SecurityValidationTest {
         val bufferSize = 8192 // 8KB buffers for streaming
         val maxDirectMemory = 10 * 1024 * 1024 // 10MB limit for direct decryption
         
-        assertTrue("Buffer size should be reasonable", bufferSize >= 512 && bufferSize <= 128 * 1024)
-        assertTrue("Memory limit should prevent DoS", maxDirectMemory <= 200 * 1024 * 1024) // More realistic test
+        val minBufferSize = 512
+        val maxBufferSize = 128 * 1024
+        val maxMemoryLimit = 200 * 1024 * 1024
+        
+        assertTrue("Buffer size should be reasonable", bufferSize >= minBufferSize && bufferSize <= maxBufferSize)
+        assertTrue("Memory limit should prevent DoS", maxDirectMemory <= maxMemoryLimit)
     }
 
     @Test
     fun testRandomnessQuality() {
         // Test that randomness generation is high quality
         
-        val random = SecureRandom()
         val samples = mutableSetOf<String>()
         
         // Generate 1000 random samples
         repeat(1000) {
             val randomBytes = ByteArray(16)
-            random.nextBytes(randomBytes)
+            secureRandom.nextBytes(randomBytes)
             samples.add(randomBytes.contentToString())
         }
         
@@ -134,7 +144,7 @@ class SecurityValidationTest {
         
         // Test entropy distribution (basic check)
         val firstSample = ByteArray(16)
-        random.nextBytes(firstSample)
+        secureRandom.nextBytes(firstSample)
         assertNotEquals("Should not be all zeros", ByteArray(16).contentToString(), firstSample.contentToString())
         assertNotEquals("Should not be all 0xFF", ByteArray(16) { 0xFF.toByte() }.contentToString(), firstSample.contentToString())
     }

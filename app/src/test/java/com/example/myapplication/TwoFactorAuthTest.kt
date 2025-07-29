@@ -11,6 +11,11 @@ import java.security.SecureRandom
  * Tests the core logic without Android dependencies
  */
 class TwoFactorAuthTest {
+    
+    companion object {
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+    }
 
     @Test
     fun testPinValidation() {
@@ -34,7 +39,7 @@ class TwoFactorAuthTest {
         // Test Argon2 hashing implementation
         val pin = "1234"
         val salt = ByteArray(16)
-        SecureRandom().nextBytes(salt)
+        secureRandom.nextBytes(salt)
         
         val hash1 = hashPin(pin, salt)
         val hash2 = hashPin(pin, salt)
@@ -44,7 +49,7 @@ class TwoFactorAuthTest {
         
         // Different salt should produce different hash
         val differentSalt = ByteArray(16)
-        SecureRandom().nextBytes(differentSalt)
+        secureRandom.nextBytes(differentSalt)
         val hash3 = hashPin(pin, differentSalt)
         
         assertNotEquals("Different salt should produce different hash", hash1, hash3)
@@ -71,9 +76,9 @@ class TwoFactorAuthTest {
                   AuthenticationManager.PIN_LOCKOUT_DURATION <= 24 * 60 * 60 * 1000L)
         
         // Current values
-        assertEquals("MAX_PIN_ATTEMPTS should be 3", 3, AuthenticationManager.MAX_PIN_ATTEMPTS)
+        assertEquals("MAX_PIN_ATTEMPTS should be 3", AuthenticationManager.MAX_PIN_ATTEMPTS, 3)
         assertEquals("PIN_LOCKOUT_DURATION should be 1 hour", 
-                    60 * 60 * 1000L, AuthenticationManager.PIN_LOCKOUT_DURATION)
+                    AuthenticationManager.PIN_LOCKOUT_DURATION, 60 * 60 * 1000L)
     }
 
     @Test
@@ -100,17 +105,22 @@ class TwoFactorAuthTest {
         // Test that Argon2 parameters are correctly configured
         val pin = "test"
         val salt = ByteArray(32) // Argon2 uses 32-byte salt
-        SecureRandom().nextBytes(salt)
+        secureRandom.nextBytes(salt)
         
         // Validate Argon2 parameters (actual implementation uses Argon2Factory)
         val iterations = 4
         val memoryKB = 131072 // 128 MB
         val parallelism = 2
         
-        assertTrue("Argon2 iterations should be secure", iterations >= 4)
-        assertTrue("Argon2 memory should be sufficient", memoryKB >= 131072)
-        assertTrue("Argon2 parallelism should be adequate", parallelism >= 2)
-        assertEquals("Salt should be 32 bytes for Argon2", 32, salt.size)
+        val minIterations = 4
+        val minMemoryKB = 131072
+        val minParallelism = 2
+        val expectedSaltSize = 32
+        
+        assertTrue("Argon2 iterations should be secure", iterations >= minIterations)
+        assertTrue("Argon2 memory should be sufficient", memoryKB >= minMemoryKB)
+        assertTrue("Argon2 parallelism should be adequate", parallelism >= minParallelism)
+        assertEquals("Salt should be 32 bytes for Argon2", expectedSaltSize, salt.size)
     }
 
     @Test
@@ -119,7 +129,7 @@ class TwoFactorAuthTest {
         val salts = mutableSetOf<String>()
         repeat(100) {
             val salt = ByteArray(16)
-            SecureRandom().nextBytes(salt)
+            secureRandom.nextBytes(salt)
             salts.add(salt.contentToString())
         }
         

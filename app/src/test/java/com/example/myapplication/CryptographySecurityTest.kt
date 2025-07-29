@@ -264,7 +264,6 @@ class CryptographySecurityTest {
     @Test
     fun testSecureRandomProperties() {
         // Test that SecureRandom produces cryptographically strong randomness
-        val secureRandom = SecureRandom()
         
         val randomBytes1 = ByteArray(32)
         val randomBytes2 = ByteArray(32)

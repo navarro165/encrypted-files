@@ -13,8 +13,10 @@ class EnhancedSecurityTest {
     @Test
     fun testSecureMemoryBufferCapacityValidation() {
         // Test that capacity validation logic is correct
-        assertTrue("Valid capacity should be positive", 1024 > 0)
-        assertTrue("Max capacity should be reasonable", 10 * 1024 * 1024 > 1024 * 1024)
+        val validCapacity = 1024
+        val maxCapacity = 10 * 1024 * 1024
+        assertTrue("Valid capacity should be positive", validCapacity > 0)
+        assertTrue("Max capacity should be reasonable", maxCapacity > 1024 * 1024)
         assertFalse("Zero capacity should be invalid", 0 > 0)
         assertFalse("Negative capacity should be invalid", -1 > 0)
     }
@@ -148,24 +150,31 @@ class EnhancedSecurityTest {
     @Test
     fun testSecurityConstants() {
         // Test that security constants are reasonable
+        val minTimeout = 60000L // At least 1 minute
+        val maxTimeout = 15 * 60 * 1000L // At most 15 minutes
         assertTrue("Authentication timeout should be reasonable", 
-                  AuthenticationManager.AUTHENTICATION_TIMEOUT >= 60000L) // At least 1 minute
+                  AuthenticationManager.AUTHENTICATION_TIMEOUT >= minTimeout)
         assertTrue("Authentication timeout should not be too long", 
-                  AuthenticationManager.AUTHENTICATION_TIMEOUT <= 15 * 60 * 1000L) // At most 15 minutes
+                  AuthenticationManager.AUTHENTICATION_TIMEOUT <= maxTimeout)
         
+        val minAttempts = 3
+        val maxAttempts = 10
         assertTrue("Max failed attempts should be reasonable", 
-                  AuthenticationManager.MAX_FAILED_ATTEMPTS >= 3)
+                  AuthenticationManager.MAX_FAILED_ATTEMPTS >= minAttempts)
         assertTrue("Max failed attempts should not be too high", 
-                  AuthenticationManager.MAX_FAILED_ATTEMPTS <= 10)
+                  AuthenticationManager.MAX_FAILED_ATTEMPTS <= maxAttempts)
         
+        val minLockout = 10 * 60 * 1000L // At least 10 minutes
         assertTrue("Lockout duration should be reasonable", 
-                  AuthenticationManager.LOCKOUT_DURATION >= 10 * 60 * 1000L) // At least 10 minutes
+                  AuthenticationManager.LOCKOUT_DURATION >= minLockout)
         
         // Two-factor authentication constants
+        val minPinAttempts = 3
+        val minPinLockout = 30 * 60 * 1000L // At least 30 minutes
         assertTrue("PIN max attempts should be reasonable", 
-                  AuthenticationManager.MAX_PIN_ATTEMPTS >= 3)
+                  AuthenticationManager.MAX_PIN_ATTEMPTS >= minPinAttempts)
         assertTrue("PIN lockout should be reasonable", 
-                  AuthenticationManager.PIN_LOCKOUT_DURATION >= 30 * 60 * 1000L) // At least 30 minutes
+                  AuthenticationManager.PIN_LOCKOUT_DURATION >= minPinLockout)
     }
 
     @Test

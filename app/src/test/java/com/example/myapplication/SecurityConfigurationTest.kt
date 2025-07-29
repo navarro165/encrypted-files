@@ -65,11 +65,15 @@ class SecurityConfigurationTest {
         val memoryKB = 131072 // 128 MB
         val parallelism = 2
         
+        val minIterations = 3
+        val minMemoryKB = 65536
+        val expectedIterations = 4
+        
         assertTrue("Argon2 iterations should be at least 3", 
-            iterations >= 3)
+            iterations >= minIterations)
         assertTrue("Argon2 memory should be at least 64MB", 
-            memoryKB >= 65536)
-        assertEquals("Should use exactly 4 iterations", 4, iterations)
+            memoryKB >= minMemoryKB)
+        assertEquals("Should use exactly 4 iterations", expectedIterations, iterations)
     }
 
     @Test
@@ -77,10 +81,14 @@ class SecurityConfigurationTest {
         // Test buffer sizes are appropriate for security and performance
         val bufferSize = 8192 // 8KB as used in streaming
         
-        assertTrue("Buffer should be at least 512B", bufferSize >= 512)
+        val minBufferSize = 512
+        val maxBufferSize = 128 * 1024
+        val expectedBufferSize = 8192
+        
+        assertTrue("Buffer should be at least 512B", bufferSize >= minBufferSize)
         assertTrue("Buffer should not exceed 128KB (memory efficiency)", 
-            bufferSize <= 128 * 1024)
-        assertEquals("Should use 8KB buffer", 8192, bufferSize)
+            bufferSize <= maxBufferSize)
+        assertEquals("Should use 8KB buffer", expectedBufferSize, bufferSize)
     }
 
     @Test
@@ -106,9 +114,13 @@ class SecurityConfigurationTest {
         val keyLength = 256 // bits
         val saltLength = 16 // bytes (128 bits)
         
-        assertEquals("Key should be 256 bits", 256, keyLength)
-        assertTrue("Salt should be at least 64 bits", saltLength >= 8)
-        assertTrue("Salt should not exceed 512 bits", saltLength <= 64)
+        val expectedKeyLength = 256
+        val minSaltLength = 8
+        val maxSaltLength = 64
+        
+        assertEquals("Key should be 256 bits", expectedKeyLength, keyLength)
+        assertTrue("Salt should be at least 64 bits", saltLength >= minSaltLength)
+        assertTrue("Salt should not exceed 512 bits", saltLength <= maxSaltLength)
     }
 
     @Test
@@ -125,8 +137,11 @@ class SecurityConfigurationTest {
         val ivLength = 12 // bytes for GCM
         val saltLength = 32 // bytes for Argon2
         
-        assertEquals("IV should be 12 bytes for GCM", 12, ivLength)
-        assertEquals("Salt should be 32 bytes for Argon2", 32, saltLength)
+        val expectedIvLength = 12
+        val expectedSaltLength = 32
+        
+        assertEquals("IV should be 12 bytes for GCM", expectedIvLength, ivLength)
+        assertEquals("Salt should be 32 bytes for Argon2", expectedSaltLength, saltLength)
     }
 
     @Test
