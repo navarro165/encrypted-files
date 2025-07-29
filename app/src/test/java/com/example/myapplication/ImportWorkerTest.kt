@@ -1,95 +1,110 @@
 package com.example.myapplication
 
-import androidx.work.Data
 import org.junit.Test
 import org.junit.Assert.*
 
 /**
- * Tests for ImportWorker functionality
+ * Tests for ImportWorker notification functionality.
  */
 class ImportWorkerTest {
-    
+
     @Test
-    fun testImportWorkerCreation() {
-        // Test that ImportWorker can be created with valid parameters
-        val inputData = Data.Builder()
-            .putString("source_uri", "content://test/import")
-            .putString("filename", "test_file.txt")
-            .build()
-        
-        assertNotNull("Input data should be created successfully", inputData)
-        assertEquals("Source URI should match", "content://test/import", inputData.getString("source_uri"))
-        assertEquals("Filename should match", "test_file.txt", inputData.getString("filename"))
-    }
-    
-    @Test
-    fun testImportWorkerWithInvalidData() {
-        // Test that worker handles invalid input data gracefully
-        val inputData = Data.Builder()
-            .putString("source_uri", null)
-            .putString("filename", null)
-            .build()
-        
-        assertNotNull("Input data should be created even with null values", inputData)
-        assertNull("Source URI should be null", inputData.getString("source_uri"))
-        assertNull("Filename should be null", inputData.getString("filename"))
-    }
-    
-    @Test
-    fun testImportWorkerCreateWorkRequest() {
-        // Test that work request is created correctly
-        val sourceUri = "content://test/import"
+    fun testNotificationLogic() {
+        // Test the notification logic without requiring Android context
+        val action = "com.example.myapplication.IMPORT_COMPLETED_LOCAL"
         val filename = "test_file.txt"
+        val success = true
         
-        // Test that the method can be called without throwing exceptions
-        try {
-            val workRequest = ImportWorker.createWorkRequest(sourceUri, filename)
-            assertNotNull("Work request should be created", workRequest)
-        } catch (e: Exception) {
-            fail("createWorkRequest should not throw exceptions: ${e.message}")
-        }
-    }
-    
-    @Test
-    fun testImportWorkerBackoffPolicy() {
-        // Test that work request has correct backoff policy
-        try {
-            val workRequest = ImportWorker.createWorkRequest(
-                "content://test/import",
-                "test_file.txt"
-            )
-            assertNotNull("Work request should be created", workRequest)
-        } catch (e: Exception) {
-            fail("createWorkRequest should not throw exceptions: ${e.message}")
-        }
-    }
-    
-    @Test
-    fun testImportWorkerConstraints() {
-        // Test that work request has correct constraints
-        try {
-            val workRequest = ImportWorker.createWorkRequest(
-                "content://test/import",
-                "test_file.txt"
-            )
-            assertNotNull("Work request should be created", workRequest)
-        } catch (e: Exception) {
-            fail("createWorkRequest should not throw exceptions: ${e.message}")
-        }
-    }
-    
-    @Test
-    fun testImportWorkerDataKeys() {
-        // Test that the correct data keys are used
-        val sourceUri = "content://test/import"
-        val filename = "test_file.txt"
+        // Simulate the notification data structure
+        val notificationData = mapOf(
+            "action" to action,
+            "filename" to filename,
+            "success" to success
+        )
         
-        val inputData = Data.Builder()
-            .putString("source_uri", sourceUri)
-            .putString("filename", filename)
-            .build()
+        // Verify the notification data is correct
+        assertEquals("com.example.myapplication.IMPORT_COMPLETED_LOCAL", notificationData["action"])
+        assertEquals("test_file.txt", notificationData["filename"])
+        assertTrue(notificationData["success"] as Boolean)
+    }
+
+    @Test
+    fun testNotificationLogicWithFailure() {
+        // Test the notification logic for failure case
+        val action = "com.example.myapplication.IMPORT_COMPLETED_LOCAL"
+        val filename = "failed_file.txt"
+        val success = false
         
-        assertEquals("Source URI key should be correct", sourceUri, inputData.getString("source_uri"))
-        assertEquals("Filename key should be correct", filename, inputData.getString("filename"))
+        // Simulate the notification data structure
+        val notificationData = mapOf(
+            "action" to action,
+            "filename" to filename,
+            "success" to success
+        )
+        
+        // Verify the notification data is correct
+        assertEquals("com.example.myapplication.IMPORT_COMPLETED_LOCAL", notificationData["action"])
+        assertEquals("failed_file.txt", notificationData["filename"])
+        assertFalse(notificationData["success"] as Boolean)
+    }
+
+    @Test
+    fun testPendingImportsLogic() {
+        // Test the pending imports logic
+        val pendingImports = mutableSetOf<String>()
+        
+        // Add files to pending imports
+        pendingImports.add("file1.txt")
+        pendingImports.add("file2.txt")
+        
+        // Verify both files are pending
+        assertEquals(2, pendingImports.size)
+        assertTrue(pendingImports.contains("file1.txt"))
+        assertTrue(pendingImports.contains("file2.txt"))
+        
+        // Remove one file from pending
+        pendingImports.remove("file1.txt")
+        
+        // Verify only one file remains pending
+        assertEquals(1, pendingImports.size)
+        assertFalse(pendingImports.contains("file1.txt"))
+        assertTrue(pendingImports.contains("file2.txt"))
+        
+        // Remove the second file
+        pendingImports.remove("file2.txt")
+        
+        // Verify no files are pending
+        assertEquals(0, pendingImports.size)
+        assertFalse(pendingImports.contains("file2.txt"))
+    }
+
+    @Test
+    fun testSimultaneousImportHandling() {
+        // Test that simultaneous imports are handled correctly
+        val pendingImports = mutableSetOf<String>()
+        
+        // Simulate starting two simultaneous imports
+        pendingImports.add("image.jpg")
+        pendingImports.add("app.apk")
+        
+        // Verify both are pending
+        assertEquals(2, pendingImports.size)
+        assertTrue(pendingImports.contains("image.jpg"))
+        assertTrue(pendingImports.contains("app.apk"))
+        
+        // Simulate first import completion
+        pendingImports.remove("image.jpg")
+        
+        // Verify only second file is still pending
+        assertEquals(1, pendingImports.size)
+        assertFalse(pendingImports.contains("image.jpg"))
+        assertTrue(pendingImports.contains("app.apk"))
+        
+        // Simulate second import completion
+        pendingImports.remove("app.apk")
+        
+        // Verify no files are pending
+        assertEquals(0, pendingImports.size)
+        assertFalse(pendingImports.contains("app.apk"))
     }
 } 

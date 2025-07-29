@@ -70,18 +70,26 @@ class ImportWorker(
                 Log.i("ImportWorker", "Import completed successfully: $filename")
                 
                 // Notify MainActivity to refresh the file list
-                notifyImportCompleted()
+                notifyImportCompleted(filename, true)
                 
                 Result.success()
             } else {
                 setForeground(createForegroundInfo("Import failed: $filename", 0, 100))
                 Log.e("ImportWorker", "Import failed: $filename")
+                
+                // Notify MainActivity about the failure
+                notifyImportCompleted(filename, false)
+                
                 Result.failure()
             }
             
         } catch (e: Exception) {
             Log.e("ImportWorker", "Import failed: ${e.message}")
             setForeground(createForegroundInfo("Import failed: $filename", 0, 100))
+            
+            // Notify MainActivity about the failure
+            notifyImportCompleted(filename, false)
+            
             Result.failure()
         }
     }
@@ -194,14 +202,17 @@ class ImportWorker(
         return ForegroundInfo(1002, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
     }
     
-    private fun notifyImportCompleted() {
+    private fun notifyImportCompleted(filename: String, success: Boolean) {
         try {
             // Use LocalBroadcastManager for reliable in-app communication
             val localIntent = android.content.Intent("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
             localIntent.setPackage(applicationContext.packageName) // XSECURITY FI: Make intent explicit
+            // Add the specific filename to track individual completions
+            localIntent.putExtra("completed_filename", filename)
+            localIntent.putExtra("success", success) // Pass success status
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
                 .sendBroadcast(localIntent)
-            Log.d("ImportWorker", "Import completion notification sent successfully")
+            Log.d("ImportWorker", "Import completion notification sent successfully for: $filename, success: $success")
         } catch (e: Exception) {
             Log.w("ImportWorker", "Could not send import completion notification: ${e.message}")
         }

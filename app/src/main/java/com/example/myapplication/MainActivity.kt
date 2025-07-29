@@ -255,15 +255,34 @@ class MainActivity : AppCompatActivity() {
         importCompletedReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: Intent?) {
                 if (intent?.action == "com.example.myapplication.IMPORT_COMPLETED_LOCAL") {
-                    android.util.Log.d("MainActivity", "Import completion notification received, refreshing file list")
-                    // Clear pending imports and refresh the file list when import completes
+                    val completedFilename = intent.getStringExtra("completed_filename")
+                    val success = intent.getBooleanExtra("success", false)
+                    android.util.Log.d("MainActivity", "Import completion notification received for: $completedFilename, success: $success")
+                    
+                    // Remove the file from pending imports regardless of success/failure
                     runOnUiThread {
-                        android.util.Log.d("MainActivity", "Clearing pending imports, count before: ${pendingImports.size}")
-                        pendingImports.clear()
-                        android.util.Log.d("MainActivity", "Pending imports cleared, count after: ${pendingImports.size}")
-                        refreshFileListWithPendingState()
-                        fileAdapter.notifyDataSetChanged() // Force refresh
-                        Toast.makeText(this@MainActivity, "File list refreshed", Toast.LENGTH_SHORT).show()
+                        if (completedFilename != null) {
+                            android.util.Log.d("MainActivity", "Removing file from pending imports: $completedFilename")
+                            val wasRemoved = pendingImports.remove(completedFilename)
+                            android.util.Log.d("MainActivity", "File removed from pending: $wasRemoved, remaining pending: ${pendingImports.size}")
+                            
+                            // Refresh the file list to reflect the completion
+                            refreshFileListWithPendingState()
+                            fileAdapter.notifyDataSetChanged() // Force refresh
+                            
+                            // Show appropriate message based on success/failure
+                            if (success) {
+                                if (pendingImports.isEmpty()) {
+                                    Toast.makeText(this@MainActivity, "All imports completed successfully", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(this@MainActivity, "Import completed: $completedFilename", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(this@MainActivity, "Import failed: $completedFilename", Toast.LENGTH_LONG).show()
+                            }
+                        } else {
+                            android.util.Log.w("MainActivity", "Import completion notification received but no filename provided")
+                        }
                     }
                 }
             }
@@ -655,6 +674,18 @@ class MainActivity : AppCompatActivity() {
     
     fun isFilePending(filename: String): Boolean {
         return pendingImports.contains(filename)
+    }
+
+    fun getPendingImportsCount(): Int {
+        return pendingImports.size
+    }
+
+    // Test helper method to simulate import completion
+    fun handleImportCompletion(filename: String, success: Boolean) {
+        val intent = Intent("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
+        intent.putExtra("completed_filename", filename)
+        intent.putExtra("success", success)
+        importCompletedReceiver.onReceive(this, intent)
     }
 
     internal fun showDeleteConfirmationDialog(file: File) {
