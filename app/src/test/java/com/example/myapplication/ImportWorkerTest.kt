@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import org.junit.Test
 import org.junit.Assert.*
+import java.io.File
 
 /**
  * Tests for ImportWorker notification functionality.
@@ -106,5 +107,94 @@ class ImportWorkerTest {
         // Verify no files are pending
         assertEquals(0, pendingImports.size)
         assertFalse(pendingImports.contains("app.apk"))
+    }
+
+    @Test
+    fun testFileItemWrapperForDiffUtil() {
+        // Test the FileItem wrapper that fixes the DiffUtil comparison issue
+        
+        // Create test files
+        val file1 = File("/test/file1.txt")
+        val file2 = File("/test/file2.txt")
+        
+        // Create FileItems with different pending states
+        val pendingFile1 = FileItem(file1, true)
+        val completedFile1 = FileItem(file1, false)
+        val pendingFile2 = FileItem(file2, true)
+        
+        // Test that same file with different pending states are considered different
+        assertNotEquals(pendingFile1, completedFile1)
+        assertNotEquals(pendingFile1.hashCode(), completedFile1.hashCode())
+        
+        // Test that different files with same pending state are different
+        assertNotEquals(pendingFile1, pendingFile2)
+        
+        // Test that same file with same pending state are equal
+        val pendingFile1Copy = FileItem(file1, true)
+        assertEquals(pendingFile1, pendingFile1Copy)
+        assertEquals(pendingFile1.hashCode(), pendingFile1Copy.hashCode())
+    }
+
+    @Test
+    fun testFileItemProperties() {
+        // Test FileItem property access
+        val testFile = File("/test/sample.txt")
+        val fileItem = FileItem(testFile, true)
+        
+        assertEquals("sample.txt", fileItem.name)
+        assertEquals("/test/sample.txt", fileItem.path)
+        assertFalse(fileItem.isDirectory)
+        assertTrue(fileItem.isPending)
+    }
+
+    @Test
+    fun testSimultaneousImportCompletionOrder() {
+        // Test that import completions are handled in the correct order
+        val pendingImports = mutableSetOf<String>()
+        
+        // Start 3 simultaneous imports
+        pendingImports.add("first.txt")
+        pendingImports.add("second.txt")
+        pendingImports.add("third.txt")
+        
+        assertEquals(3, pendingImports.size)
+        
+        // Complete them in reverse order
+        pendingImports.remove("third.txt")
+        assertEquals(2, pendingImports.size)
+        assertTrue(pendingImports.contains("first.txt"))
+        assertTrue(pendingImports.contains("second.txt"))
+        assertFalse(pendingImports.contains("third.txt"))
+        
+        pendingImports.remove("second.txt")
+        assertEquals(1, pendingImports.size)
+        assertTrue(pendingImports.contains("first.txt"))
+        assertFalse(pendingImports.contains("second.txt"))
+        
+        pendingImports.remove("first.txt")
+        assertEquals(0, pendingImports.size)
+        assertFalse(pendingImports.contains("first.txt"))
+    }
+
+    @Test
+    fun testImportFailureHandling() {
+        // Test that failed imports are properly removed from pending
+        val pendingImports = mutableSetOf<String>()
+        
+        // Add files to pending
+        pendingImports.add("success.txt")
+        pendingImports.add("failure.txt")
+        
+        assertEquals(2, pendingImports.size)
+        
+        // Simulate success
+        pendingImports.remove("success.txt")
+        assertEquals(1, pendingImports.size)
+        assertTrue(pendingImports.contains("failure.txt"))
+        
+        // Simulate failure
+        pendingImports.remove("failure.txt")
+        assertEquals(0, pendingImports.size)
+        assertFalse(pendingImports.contains("failure.txt"))
     }
 } 

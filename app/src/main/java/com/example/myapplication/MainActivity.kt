@@ -54,19 +54,13 @@ class MainActivity : AppCompatActivity() {
     private val pendingImports = mutableSetOf<String>() // Track pending imports by filename
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        android.util.Log.d("MainActivity", "onCreate started")
         super.onCreate(savedInstanceState)
-        android.util.Log.d("MainActivity", "super.onCreate completed")
         
-        android.util.Log.d("MainActivity", "About to create notification channel")
         // Create notification channel for background exports
         createNotificationChannel()
-        android.util.Log.d("MainActivity", "Notification channel created")
         
-        android.util.Log.d("MainActivity", "About to initialize import receiver")
         // Initialize import completion receiver
         initializeImportReceiver()
-        android.util.Log.d("MainActivity", "Import receiver initialized")
         
         // Anti-screenshot protection
         window.setFlags(
@@ -74,21 +68,15 @@ class MainActivity : AppCompatActivity() {
             WindowManager.LayoutParams.FLAG_SECURE
         )
         
-        android.util.Log.d("MainActivity", "About to initialize security manager")
         // Initialize security components first
         securityManager = SecurityManager.getInstance(this)
-        android.util.Log.d("MainActivity", "Security manager initialized")
         
-        android.util.Log.d("MainActivity", "About to perform security check")
         // Perform comprehensive security check
         val securityResult = securityManager.performSecurityCheck()
-        android.util.Log.d("MainActivity", "Security check result: ${securityResult.isSecure}")
         if (!securityResult.isSecure) {
-            android.util.Log.e("MainActivity", "Security violation detected, returning early")
             handleSecurityViolation(securityResult.violations)
             return
         }
-        android.util.Log.d("MainActivity", "Security check passed, continuing")
         
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -121,7 +109,6 @@ class MainActivity : AppCompatActivity() {
         if (!rootDir.exists()) {
             val created = rootDir.mkdir()
             if (!created) {
-                android.util.Log.e("MainActivity", "Failed to create encrypted files directory")
                 Toast.makeText(this, "Failed to initialize app storage", Toast.LENGTH_LONG).show()
                 finish()
                 return
@@ -147,7 +134,6 @@ class MainActivity : AppCompatActivity() {
                 try {
                     startActivity(intent)
                 } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "Failed to start FileViewerActivity", e)
                     Toast.makeText(this, "Failed to open file", Toast.LENGTH_SHORT).show()
                 }
             },
@@ -200,9 +186,7 @@ class MainActivity : AppCompatActivity() {
         loadEncryptedFiles()
         
         // Register import completion receiver
-        android.util.Log.d("MainActivity", "About to register import receiver")
         registerImportReceiver()
-        android.util.Log.d("MainActivity", "Import receiver registration completed")
     }
     
     override fun onDestroy() {
@@ -254,8 +238,6 @@ class MainActivity : AppCompatActivity() {
     private fun initializeImportReceiver() {
         importCompletedReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: Intent?) {
-                android.util.Log.d("MainActivity", "Import receiver onReceive called with action: ${intent?.action}")
-                
                 if (intent?.action == "com.example.myapplication.IMPORT_COMPLETED_LOCAL") {
                     val completedFilename = intent.getStringExtra("completed_filename")
                     val success = intent.getBooleanExtra("success", false)
@@ -263,17 +245,13 @@ class MainActivity : AppCompatActivity() {
                     
                     // Remove the file from pending imports regardless of success/failure
                     runOnUiThread {
-                        android.util.Log.d("MainActivity", "Processing import completion on UI thread")
-                        
                         if (completedFilename != null) {
                             android.util.Log.d("MainActivity", "Removing file from pending imports: $completedFilename")
                             val wasRemoved = pendingImports.remove(completedFilename)
                             android.util.Log.d("MainActivity", "File removed from pending: $wasRemoved, remaining pending: ${pendingImports.size}")
                             
                             // Refresh the file list to reflect the completion
-                            android.util.Log.d("MainActivity", "About to refresh file list")
                             refreshFileListWithPendingState()
-                            android.util.Log.d("MainActivity", "File list refresh completed")
                             
                             // Show appropriate message based on success/failure
                             if (success) {
@@ -289,8 +267,6 @@ class MainActivity : AppCompatActivity() {
                             android.util.Log.w("MainActivity", "Import completion notification received but no filename provided")
                         }
                     }
-                } else {
-                    android.util.Log.w("MainActivity", "Received unexpected broadcast action: ${intent?.action}")
                 }
             }
         }
@@ -303,7 +279,6 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
                 .registerReceiver(importCompletedReceiver, localFilter)
-            android.util.Log.d("MainActivity", "Import completion receiver registered with LocalBroadcastManager")
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to register import completion receiver: ${e.message}")
         }
@@ -314,10 +289,8 @@ class MainActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
                 .unregisterReceiver(importCompletedReceiver)
-            android.util.Log.d("MainActivity", "Import completion receiver unregistered")
         } catch (e: Exception) {
             // Receiver might not be registered
-            android.util.Log.w("MainActivity", "Failed to unregister import completion receiver: ${e.message}")
         }
     }
 
@@ -673,12 +646,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         android.util.Log.d("MainActivity", "refreshFileListWithPendingState: ${actualFiles.size} actual files, ${pendingImports.size} pending files")
-        android.util.Log.d("MainActivity", "Pending files: ${pendingImports.joinToString(", ")}")
-        android.util.Log.d("MainActivity", "Total files to display: ${allFileItems.size}")
-        
         fileAdapter.submitList(allFileItems)
-        
-        android.util.Log.d("MainActivity", "File list refreshed with FileItems")
     }
     
     fun isFilePending(filename: String): Boolean {
