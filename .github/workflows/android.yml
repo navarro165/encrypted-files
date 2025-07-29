@@ -139,6 +139,25 @@ jobs:
         chmod +x generate_icons.sh
         ./generate_icons.sh
         
+    - name: Setup debug keystore
+      run: |
+        # Create .android directory
+        mkdir -p ~/.android
+        
+        # Generate debug keystore with standard Android debug credentials
+        keytool -genkey -v -keystore ~/.android/debug.keystore \
+          -storepass android -alias androiddebugkey \
+          -keypass android -keyalg RSA -keysize 2048 \
+          -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        
+        # Create keystore.properties for debug builds
+        echo "storeFile=$HOME/.android/debug.keystore" > keystore.properties
+        echo "storePassword=android" >> keystore.properties
+        echo "keyAlias=androiddebugkey" >> keystore.properties
+        echo "keyPassword=android" >> keystore.properties
+        
+        echo "✅ Debug keystore created successfully"
+        
     - name: Build debug APK
       run: ./gradlew assembleDebug
       
