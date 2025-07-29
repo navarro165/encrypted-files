@@ -254,6 +254,8 @@ class MainActivity : AppCompatActivity() {
     private fun initializeImportReceiver() {
         importCompletedReceiver = object : android.content.BroadcastReceiver() {
             override fun onReceive(context: android.content.Context?, intent: Intent?) {
+                android.util.Log.d("MainActivity", "Import receiver onReceive called with action: ${intent?.action}")
+                
                 if (intent?.action == "com.example.myapplication.IMPORT_COMPLETED_LOCAL") {
                     val completedFilename = intent.getStringExtra("completed_filename")
                     val success = intent.getBooleanExtra("success", false)
@@ -261,14 +263,17 @@ class MainActivity : AppCompatActivity() {
                     
                     // Remove the file from pending imports regardless of success/failure
                     runOnUiThread {
+                        android.util.Log.d("MainActivity", "Processing import completion on UI thread")
+                        
                         if (completedFilename != null) {
                             android.util.Log.d("MainActivity", "Removing file from pending imports: $completedFilename")
                             val wasRemoved = pendingImports.remove(completedFilename)
                             android.util.Log.d("MainActivity", "File removed from pending: $wasRemoved, remaining pending: ${pendingImports.size}")
                             
                             // Refresh the file list to reflect the completion
+                            android.util.Log.d("MainActivity", "About to refresh file list")
                             refreshFileListWithPendingState()
-                            fileAdapter.notifyDataSetChanged() // Force refresh
+                            android.util.Log.d("MainActivity", "File list refresh completed")
                             
                             // Show appropriate message based on success/failure
                             if (success) {
@@ -284,25 +289,21 @@ class MainActivity : AppCompatActivity() {
                             android.util.Log.w("MainActivity", "Import completion notification received but no filename provided")
                         }
                     }
+                } else {
+                    android.util.Log.w("MainActivity", "Received unexpected broadcast action: ${intent?.action}")
                 }
             }
         }
     }
     
     private fun registerImportReceiver() {
-        // Register for local broadcasts only (more reliable for in-app communication)
+        // Always use LocalBroadcastManager for consistency with ImportWorker
         try {
             val localFilter = android.content.IntentFilter("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Use modern broadcast registration for API 33+
-                registerReceiver(importCompletedReceiver, localFilter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                // Use LocalBroadcastManager for older versions
-                @Suppress("DEPRECATION")
-                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-                    .registerReceiver(importCompletedReceiver, localFilter)
-            }
-            android.util.Log.d("MainActivity", "Import completion receiver registered")
+            @Suppress("DEPRECATION")
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .registerReceiver(importCompletedReceiver, localFilter)
+            android.util.Log.d("MainActivity", "Import completion receiver registered with LocalBroadcastManager")
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to register import completion receiver: ${e.message}")
         }
@@ -310,17 +311,13 @@ class MainActivity : AppCompatActivity() {
     
     private fun unregisterImportReceiver() {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Use modern broadcast unregistration for API 33+
-                unregisterReceiver(importCompletedReceiver)
-            } else {
-                // Use LocalBroadcastManager for older versions
-                @Suppress("DEPRECATION")
-                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-                    .unregisterReceiver(importCompletedReceiver)
-            }
+            @Suppress("DEPRECATION")
+            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                .unregisterReceiver(importCompletedReceiver)
+            android.util.Log.d("MainActivity", "Import completion receiver unregistered")
         } catch (e: Exception) {
             // Receiver might not be registered
+            android.util.Log.w("MainActivity", "Failed to unregister import completion receiver: ${e.message}")
         }
     }
 
@@ -669,7 +666,15 @@ class MainActivity : AppCompatActivity() {
         }
         
         android.util.Log.d("MainActivity", "refreshFileListWithPendingState: ${actualFiles.size} actual files, ${pendingImports.size} pending files")
+        android.util.Log.d("MainActivity", "Pending files: ${pendingImports.joinToString(", ")}")
+        android.util.Log.d("MainActivity", "Total files to display: ${allFiles.size}")
+        
         fileAdapter.submitList(allFiles)
+        
+        // Force a UI update
+        fileAdapter.notifyDataSetChanged()
+        
+        android.util.Log.d("MainActivity", "File list refreshed and adapter notified")
     }
     
     fun isFilePending(filename: String): Boolean {

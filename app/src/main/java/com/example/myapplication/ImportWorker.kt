@@ -204,17 +204,24 @@ class ImportWorker(
     
     private fun notifyImportCompleted(filename: String, success: Boolean) {
         try {
+            android.util.Log.d("ImportWorker", "About to send import completion notification for: $filename, success: $success")
+            
             // Use LocalBroadcastManager for reliable in-app communication
             val localIntent = android.content.Intent("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
             localIntent.setPackage(applicationContext.packageName) // XSECURITY FI: Make intent explicit
             // Add the specific filename to track individual completions
             localIntent.putExtra("completed_filename", filename)
             localIntent.putExtra("success", success) // Pass success status
+            
+            android.util.Log.d("ImportWorker", "Created intent with action: ${localIntent.action}")
+            android.util.Log.d("ImportWorker", "Intent extras: filename=${localIntent.getStringExtra("completed_filename")}, success=${localIntent.getBooleanExtra("success", false)}")
+            
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
                 .sendBroadcast(localIntent)
-            Log.d("ImportWorker", "Import completion notification sent successfully for: $filename, success: $success")
+                
+            android.util.Log.d("ImportWorker", "Import completion notification sent successfully for: $filename, success: $success")
         } catch (e: Exception) {
-            Log.w("ImportWorker", "Could not send import completion notification: ${e.message}")
+            android.util.Log.e("ImportWorker", "Could not send import completion notification: ${e.message}", e)
         }
     }
 } 
