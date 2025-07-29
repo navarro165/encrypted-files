@@ -9,12 +9,22 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.myapplication.databinding.ItemFileBinding
 import java.io.File
 
+// Wrapper class to include pending state for proper DiffUtil comparison
+data class FileItem(
+    val file: File,
+    val isPending: Boolean
+) {
+    val name: String get() = file.name
+    val isDirectory: Boolean get() = file.isDirectory
+    val path: String get() = file.path
+}
+
 class FileAdapter(
     private val mainActivity: MainActivity,
     private val onMultiSelect: (List<File>) -> Unit,
     private val onOpenFile: (File) -> Unit,
     private val onOpenFolder: (File) -> Unit
-) : ListAdapter<File, FileAdapter.FileViewHolder>(FileDiffCallback()) {
+) : ListAdapter<FileItem, FileAdapter.FileViewHolder>(FileDiffCallback()) {
 
     private var isMultiSelectMode = false
     private val selectedItems = mutableListOf<File>()
@@ -25,8 +35,8 @@ class FileAdapter(
     }
 
     override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
-        val file = getItem(position)
-        holder.bind(file)
+        val fileItem = getItem(position)
+        holder.bind(fileItem)
     }
 
     fun setMultiSelectMode(enabled: Boolean) {
@@ -43,18 +53,18 @@ class FileAdapter(
 
     fun selectAll() {
         selectedItems.clear()
-        selectedItems.addAll(currentList)
+        selectedItems.addAll(currentList.map { it.file })
         notifyDataSetChanged()
         onMultiSelect(selectedItems)
     }
 
     inner class FileViewHolder(private val binding: ItemFileBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(file: File) {
+        fun bind(fileItem: FileItem) {
+            val file = fileItem.file
+            val isPending = fileItem.isPending
+            
             binding.textView.text = file.name
 
-            // Check if file is pending import
-            val isPending = mainActivity.isFilePending(file.name)
-            
             if (isPending) {
                 // Show pending files with lighter grey and encrypting indicator
                 binding.root.alpha = 0.7f
@@ -131,12 +141,13 @@ class FileAdapter(
     }
 }
 
-class FileDiffCallback : DiffUtil.ItemCallback<File>() {
-    override fun areItemsTheSame(oldItem: File, newItem: File): Boolean {
+class FileDiffCallback : DiffUtil.ItemCallback<FileItem>() {
+    override fun areItemsTheSame(oldItem: FileItem, newItem: FileItem): Boolean {
         return oldItem.path == newItem.path
     }
 
-    override fun areContentsTheSame(oldItem: File, newItem: File): Boolean {
-        return oldItem == newItem
+    override fun areContentsTheSame(oldItem: FileItem, newItem: FileItem): Boolean {
+        // Now we can properly compare the pending state
+        return oldItem.isPending == newItem.isPending && oldItem.file == newItem.file
     }
 }

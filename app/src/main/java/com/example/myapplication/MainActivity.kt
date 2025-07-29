@@ -646,35 +646,39 @@ class MainActivity : AppCompatActivity() {
         files.forEach { file ->
             android.util.Log.d("MainActivity", "loadEncryptedFiles: File: ${file.name} (${file.length()} bytes)")
         }
-        fileAdapter.submitList(files)
+        
+        // Convert files to FileItems with pending state
+        val fileItems = files.map { file ->
+            FileItem(file, isFilePending(file.name))
+        }
+        fileAdapter.submitList(fileItems)
     }
     
     private fun refreshFileListWithPendingState() {
         val actualFiles = currentDir.listFiles()?.toList() ?: emptyList()
-        val allFiles = mutableListOf<File>()
+        val allFileItems = mutableListOf<FileItem>()
         
-        // Add actual files
-        allFiles.addAll(actualFiles)
+        // Add actual files with their pending state
+        actualFiles.forEach { file ->
+            allFileItems.add(FileItem(file, isFilePending(file.name)))
+        }
         
         // Add pending files that don't exist yet
         pendingImports.forEach { pendingFilename ->
             if (!actualFiles.any { it.name == pendingFilename }) {
                 // Create a placeholder file for pending imports
                 val pendingFile = File(currentDir, pendingFilename)
-                allFiles.add(pendingFile)
+                allFileItems.add(FileItem(pendingFile, true)) // Always pending
             }
         }
         
         android.util.Log.d("MainActivity", "refreshFileListWithPendingState: ${actualFiles.size} actual files, ${pendingImports.size} pending files")
         android.util.Log.d("MainActivity", "Pending files: ${pendingImports.joinToString(", ")}")
-        android.util.Log.d("MainActivity", "Total files to display: ${allFiles.size}")
+        android.util.Log.d("MainActivity", "Total files to display: ${allFileItems.size}")
         
-        fileAdapter.submitList(allFiles)
+        fileAdapter.submitList(allFileItems)
         
-        // Force a UI update
-        fileAdapter.notifyDataSetChanged()
-        
-        android.util.Log.d("MainActivity", "File list refreshed and adapter notified")
+        android.util.Log.d("MainActivity", "File list refreshed with FileItems")
     }
     
     fun isFilePending(filename: String): Boolean {
