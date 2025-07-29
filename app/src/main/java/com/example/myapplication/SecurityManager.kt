@@ -250,7 +250,7 @@ class SecurityManager private constructor(private val context: Context) {
      */
     private fun checkSystemProperties(): Boolean {
         try {
-            val process = Runtime.getRuntime().exec("getprop ro.debuggable")
+            val process = Runtime.getRuntime().exec("/system/bin/getprop ro.debuggable")
             val scanner = Scanner(process.inputStream)
             val result = scanner.nextLine()
             scanner.close()
@@ -335,7 +335,7 @@ class SecurityManager private constructor(private val context: Context) {
     private fun checkFridaDetection(): Boolean {
         try {
             // Check for Frida-related processes
-            val process = Runtime.getRuntime().exec("ps")
+            val process = Runtime.getRuntime().exec("/bin/ps")
             val scanner = Scanner(process.inputStream)
             while (scanner.hasNextLine()) {
                 val line = scanner.nextLine().lowercase()
@@ -614,7 +614,7 @@ class SecurityManager private constructor(private val context: Context) {
     
     private fun checkSuspiciousProcesses(): Boolean {
         return try {
-            val process = Runtime.getRuntime().exec("ps")
+            val process = Runtime.getRuntime().exec("/bin/ps")
             val scanner = Scanner(process.inputStream)
             while (scanner.hasNextLine()) {
                 val line = scanner.nextLine().lowercase()
@@ -637,7 +637,7 @@ class SecurityManager private constructor(private val context: Context) {
     private fun checkKernelModifications(): Boolean {
         return try {
             // Check for unusual kernel properties
-            val process = Runtime.getRuntime().exec("getprop ro.kernel.qemu")
+            val process = Runtime.getRuntime().exec("/system/bin/getprop ro.kernel.qemu")
             val scanner = Scanner(process.inputStream)
             val result = if (scanner.hasNext()) scanner.nextLine() else ""
             scanner.close()

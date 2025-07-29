@@ -13,6 +13,11 @@ import javax.crypto.spec.GCMParameterSpec
  * without Android dependencies
  */
 class ComprehensiveSecurityTest {
+    
+    companion object {
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+    }
 
     @Test
     fun testEndToEndEncryptionSecurity() {
@@ -25,7 +30,7 @@ class ComprehensiveSecurityTest {
         val key = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt using app's algorithm
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -69,7 +74,7 @@ class ComprehensiveSecurityTest {
         val key2 = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv) // Same IV for comparison
+        secureRandom.nextBytes(iv) // Same IV for comparison
         
         val cipher1 = Cipher.getInstance("AES/GCM/NoPadding")
         cipher1.init(Cipher.ENCRYPT_MODE, key1, GCMParameterSpec(128, iv))
@@ -85,8 +90,8 @@ class ComprehensiveSecurityTest {
         // Test 2: Same key with different IVs produces different ciphertext
         val iv1 = ByteArray(12)
         val iv2 = ByteArray(12)
-        SecureRandom().nextBytes(iv1)
-        SecureRandom().nextBytes(iv2)
+        secureRandom.nextBytes(iv1)
+        secureRandom.nextBytes(iv2)
         
         val cipher3 = Cipher.getInstance("AES/GCM/NoPadding")
         cipher3.init(Cipher.ENCRYPT_MODE, key1, GCMParameterSpec(128, iv1))
@@ -110,7 +115,7 @@ class ComprehensiveSecurityTest {
         val key = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -151,7 +156,7 @@ class ComprehensiveSecurityTest {
             keys.add(key.encoded.contentToString())
             
             val iv = ByteArray(12)
-            SecureRandom().nextBytes(iv)
+            secureRandom.nextBytes(iv)
             ivs.add(iv.contentToString())
         }
         
@@ -170,7 +175,7 @@ class ComprehensiveSecurityTest {
         val key = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt large data
         val startTime = System.currentTimeMillis()
@@ -206,7 +211,7 @@ class ComprehensiveSecurityTest {
         
         // 2. GCM IV should be 96 bits (12 bytes)
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         assertEquals("Should use 96-bit IV for GCM", 12, iv.size)
         
         // 3. GCM tag length should be 128 bits

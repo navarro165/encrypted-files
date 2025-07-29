@@ -12,6 +12,11 @@ import javax.crypto.spec.GCMParameterSpec
  * These test the underlying crypto logic without Android dependencies.
  */
 class CryptographyTest {
+    
+    companion object {
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+    }
 
     @Test
     fun testAESKeyGeneration() {
@@ -34,8 +39,8 @@ class CryptographyTest {
         val iv1 = ByteArray(12)
         val iv2 = ByteArray(12)
         
-        SecureRandom().nextBytes(iv1)
-        SecureRandom().nextBytes(iv2)
+        secureRandom.nextBytes(iv1)
+        secureRandom.nextBytes(iv2)
         
         // IVs should be different each time
         assertNotEquals(iv1.contentToString(), iv2.contentToString())
@@ -55,7 +60,7 @@ class CryptographyTest {
         val key = keyGenerator.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -82,7 +87,7 @@ class CryptographyTest {
         val key2 = keyGenerator.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv) // Same IV for comparison
+        secureRandom.nextBytes(iv) // Same IV for comparison
         
         // Encrypt with key1
         val cipher1 = Cipher.getInstance("AES/GCM/NoPadding")
@@ -108,7 +113,7 @@ class CryptographyTest {
         val wrongKey = keyGenerator.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt with correct key
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")

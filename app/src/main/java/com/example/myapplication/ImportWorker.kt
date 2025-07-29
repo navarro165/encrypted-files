@@ -198,6 +198,7 @@ class ImportWorker(
         try {
             // Use LocalBroadcastManager for reliable in-app communication
             val localIntent = android.content.Intent("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
+            localIntent.setPackage(applicationContext.packageName) // XSECURITY FI: Make intent explicit
             androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(applicationContext)
                 .sendBroadcast(localIntent)
             Log.d("ImportWorker", "Import completion notification sent successfully")

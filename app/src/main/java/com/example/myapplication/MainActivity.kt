@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -118,7 +119,13 @@ class MainActivity : AppCompatActivity() {
         
         rootDir = File(filesDir, "encrypted_files")
         if (!rootDir.exists()) {
-            rootDir.mkdir()
+            val created = rootDir.mkdir()
+            if (!created) {
+                android.util.Log.e("MainActivity", "Failed to create encrypted files directory")
+                Toast.makeText(this, "Failed to initialize app storage", Toast.LENGTH_LONG).show()
+                finish()
+                return
+            }
         }
         currentDir = rootDir
 
@@ -137,7 +144,12 @@ class MainActivity : AppCompatActivity() {
             onOpenFile = { file ->
                 val intent = Intent(this, FileViewerActivity::class.java)
                 intent.putExtra("file_path", file.absolutePath)
-                startActivity(intent)
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Failed to start FileViewerActivity", e)
+                    Toast.makeText(this, "Failed to open file", Toast.LENGTH_SHORT).show()
+                }
             },
             onOpenFolder = { folder ->
                 currentDir = folder
@@ -262,8 +274,15 @@ class MainActivity : AppCompatActivity() {
         // Register for local broadcasts only (more reliable for in-app communication)
         try {
             val localFilter = android.content.IntentFilter("com.example.myapplication.IMPORT_COMPLETED_LOCAL")
-            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-                .registerReceiver(importCompletedReceiver, localFilter)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Use modern broadcast registration for API 33+
+                registerReceiver(importCompletedReceiver, localFilter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                // Use LocalBroadcastManager for older versions
+                @Suppress("DEPRECATION")
+                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                    .registerReceiver(importCompletedReceiver, localFilter)
+            }
             android.util.Log.d("MainActivity", "Import completion receiver registered")
         } catch (e: Exception) {
             android.util.Log.w("MainActivity", "Failed to register import completion receiver: ${e.message}")
@@ -272,8 +291,15 @@ class MainActivity : AppCompatActivity() {
     
     private fun unregisterImportReceiver() {
         try {
-            androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
-                .unregisterReceiver(importCompletedReceiver)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Use modern broadcast unregistration for API 33+
+                unregisterReceiver(importCompletedReceiver)
+            } else {
+                // Use LocalBroadcastManager for older versions
+                @Suppress("DEPRECATION")
+                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this)
+                    .unregisterReceiver(importCompletedReceiver)
+            }
         } catch (e: Exception) {
             // Receiver might not be registered
         }
@@ -573,7 +599,7 @@ class MainActivity : AppCompatActivity() {
 
     internal fun encryptAndSaveFile(uri: Uri) {
         val originalFileName = getFileName(uri)
-        if (originalFileName != null) {
+        if (originalFileName != "unknown_file") {
             startBackgroundImport(uri, originalFileName)
         } else {
             Toast.makeText(this, "Could not get filename", Toast.LENGTH_SHORT).show()
@@ -809,10 +835,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
         if (result == null) {
-            result = uri.path
-            val cut = result?.lastIndexOf('/')
-            if (cut != -1) {
-                result = result?.substring(cut!! + 1)
+            // Use getLastPathSegment() instead of path manipulation
+            // This prevents path traversal attacks by using Android's safe path extraction
+            result = uri.lastPathSegment
+            if (result == null) {
+                // Fallback: extract filename from path but with additional security checks
+                val path = uri.path
+                if (path != null && path.isNotEmpty()) {
+                    val cut = path.lastIndexOf('/')
+                    if (cut != -1 && cut < path.length - 1) {
+                        result = path.substring(cut + 1)
+                    } else if (cut == -1 && path.isNotEmpty()) {
+                        result = path
+                    }
+                }
             }
         }
         return sanitizeFileName(result ?: "unknown_file")

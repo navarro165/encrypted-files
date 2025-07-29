@@ -90,7 +90,12 @@ class ExportService : Service() {
                 
                 // Stop service after a delay to show completion
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    stopForeground(true)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        stopForeground(true)
+                    }
                     stopSelf()
                 }, 3000) // Show completion for 3 seconds
                 
@@ -99,7 +104,12 @@ class ExportService : Service() {
                 updateNotification("Export failed", 0, fileCount)
                 
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    stopForeground(true)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        stopForeground(true)
+                    }
                     stopSelf()
                 }, 3000)
             } finally {

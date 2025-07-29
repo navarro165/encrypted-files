@@ -42,6 +42,9 @@ class AuthenticationManager private constructor(context: Context) {
         const val PIN_LOCKOUT_DURATION = 60 * 60 * 1000L // 1 hour
         private val WEAK_PINS = setOf("1234", "0000", "1111", "9876", "2580", "1122", "1379")
         
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+        
         @Volatile
         private var INSTANCE: AuthenticationManager? = null
         
@@ -184,7 +187,7 @@ class AuthenticationManager private constructor(context: Context) {
         try {
             // Generate a random salt
             val salt = ByteArray(32) // 32-byte salt for PBKDF2
-            SecureRandom().nextBytes(salt)
+            secureRandom.nextBytes(salt)
             
             // Hash the PIN with PBKDF2
             val pinHash = hashPin(pin, salt)
@@ -200,7 +203,7 @@ class AuthenticationManager private constructor(context: Context) {
             
             val success = editor.commit() // Use commit() instead of apply() for immediate feedback
             
-            return PinSetupResult.SUCCESS
+            return if (success) PinSetupResult.SUCCESS else PinSetupResult.ERROR
         } catch (e: Exception) {
             android.util.Log.e("AuthenticationManager", "Error during PIN setup", e)
             return PinSetupResult.ERROR

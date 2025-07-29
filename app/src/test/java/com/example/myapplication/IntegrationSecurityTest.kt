@@ -12,6 +12,11 @@ import javax.crypto.spec.GCMParameterSpec
  * Integration tests that verify security components work together correctly
  */
 class IntegrationSecurityTest {
+    
+    companion object {
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+    }
 
     @Test
     fun testFileEncryptionDecryptionWorkflow() {
@@ -25,7 +30,7 @@ class IntegrationSecurityTest {
         
         // Step 2: Generate unique IV for this encryption
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Step 3: Encrypt data (simulating MainActivity.encryptAndSaveFile)
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -71,7 +76,7 @@ class IntegrationSecurityTest {
             val key = keyGen.generateKey()
             
             val iv = ByteArray(12)
-            SecureRandom().nextBytes(iv)
+            secureRandom.nextBytes(iv)
             
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
@@ -141,7 +146,7 @@ class IntegrationSecurityTest {
         val key = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Simulate streaming encryption in chunks
         val chunkSize = 8192 // 8KB chunks like the app
@@ -193,7 +198,7 @@ class IntegrationSecurityTest {
         
         val testData = "Sensitive data".toByteArray()
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt with correct key
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -244,7 +249,7 @@ class IntegrationSecurityTest {
         
         // Layer 3: IV generation
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         assertEquals("IV should be 96-bit", 12, iv.size)
         
         // Layer 4: Authenticated encryption

@@ -25,6 +25,9 @@ class SecureMemoryBuffer private constructor(
         private const val GCM_IV_LENGTH = 12
         private const val GCM_TAG_LENGTH = 16
         
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+        
         /**
          * Create a new secure memory buffer with specified capacity
          */
@@ -70,7 +73,7 @@ class SecureMemoryBuffer private constructor(
         try {
             // Generate new IV for each write
             val iv = ByteArray(GCM_IV_LENGTH)
-            SecureRandom().nextBytes(iv)
+            secureRandom.nextBytes(iv)
             
             // Encrypt the data
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")

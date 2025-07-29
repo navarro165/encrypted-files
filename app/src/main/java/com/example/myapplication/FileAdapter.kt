@@ -14,17 +14,17 @@ class FileAdapter(
     private val onMultiSelect: (List<File>) -> Unit,
     private val onOpenFile: (File) -> Unit,
     private val onOpenFolder: (File) -> Unit
-) : ListAdapter<File, FileAdapter.ViewHolder>(FileDiffCallback()) {
+) : ListAdapter<File, FileAdapter.FileViewHolder>(FileDiffCallback()) {
 
     private var isMultiSelectMode = false
     private val selectedItems = mutableListOf<File>()
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FileViewHolder {
         val binding = ItemFileBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return ViewHolder(binding)
+        return FileViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: FileViewHolder, position: Int) {
         val file = getItem(position)
         holder.bind(file)
     }
@@ -48,7 +48,7 @@ class FileAdapter(
         onMultiSelect(selectedItems)
     }
 
-    inner class ViewHolder(private val binding: ItemFileBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class FileViewHolder(private val binding: ItemFileBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(file: File) {
             binding.textView.text = file.name
 

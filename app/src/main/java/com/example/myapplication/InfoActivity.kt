@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
@@ -49,8 +50,12 @@ class InfoActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        @Suppress("DEPRECATION")
-        onBackPressed()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            onBackPressedDispatcher.onBackPressed()
+        } else {
+            @Suppress("DEPRECATION")
+            onBackPressed()
+        }
         return true
     }
 }

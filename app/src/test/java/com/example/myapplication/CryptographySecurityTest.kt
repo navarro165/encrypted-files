@@ -11,6 +11,11 @@ import javax.crypto.spec.GCMParameterSpec
  * Tests for cryptographic security properties that don't require Android context
  */
 class CryptographySecurityTest {
+    
+    companion object {
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
+    }
 
     @Test
     fun testAESGCMEncryptionSecurity() {
@@ -23,7 +28,7 @@ class CryptographySecurityTest {
         
         // Generate 96-bit IV for GCM
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt with AES-GCM
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -56,7 +61,7 @@ class CryptographySecurityTest {
         val key = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt data
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -106,7 +111,7 @@ class CryptographySecurityTest {
         // Generate 1000 IVs and verify all are unique
         repeat(1000) {
             val iv = ByteArray(12)
-            SecureRandom().nextBytes(iv)
+            secureRandom.nextBytes(iv)
             ivs.add(iv.contentToString())
         }
         
@@ -124,7 +129,7 @@ class CryptographySecurityTest {
         
         // Use same IV for both (normally bad practice, but needed for this test)
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt same data with different keys
         val cipher1 = Cipher.getInstance("AES/GCM/NoPadding")
@@ -149,8 +154,8 @@ class CryptographySecurityTest {
         
         val iv1 = ByteArray(12)
         val iv2 = ByteArray(12)
-        SecureRandom().nextBytes(iv1)
-        SecureRandom().nextBytes(iv2)
+        secureRandom.nextBytes(iv1)
+        secureRandom.nextBytes(iv2)
         
         // Encrypt same data with same key but different IVs
         val cipher1 = Cipher.getInstance("AES/GCM/NoPadding")
@@ -175,7 +180,7 @@ class CryptographySecurityTest {
         val wrongKey = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt with correct key
         val encryptCipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -232,7 +237,7 @@ class CryptographySecurityTest {
         val key = keyGen.generateKey()
         
         val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
+        secureRandom.nextBytes(iv)
         
         // Encrypt large data
         val startTime = System.currentTimeMillis()

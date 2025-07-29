@@ -90,14 +90,17 @@ class SecureKeyManager(context: Context) {
 
         // Use modern authentication parameters for API 30+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            @Suppress("NewApi")
             builder.setUserAuthenticationParameters(
                 AUTH_TIMEOUT_SECONDS,
                 KeyProperties.AUTH_BIOMETRIC_STRONG
             )
         } else {
-            // Fallback to deprecated method for older API levels
+            // For API levels below 30, we have to use the deprecated method
+            // but with a minimal timeout to reduce the security window
+            android.util.Log.w("SecureKeyManager", "Using deprecated method for API < 30")
             @Suppress("DEPRECATION")
-            builder.setUserAuthenticationValidityDurationSeconds(AUTH_TIMEOUT_SECONDS)
+            builder.setUserAuthenticationValidityDurationSeconds(1) // Minimal timeout
         }
 
         keyGenerator.init(builder.build())
@@ -165,10 +168,10 @@ class SecureKeyManager(context: Context) {
      * Securely clear sensitive byte arrays from memory using multiple passes
      */
     private fun secureWipeMemory(data: ByteArray) {
-        val random = SecureRandom()
+        // Use shared SecureRandom instance for better randomness distribution
         
         // Pass 1: Random data
-        random.nextBytes(data)
+        secureRandom.nextBytes(data)
         
         // Pass 2: All 0xFF
         Arrays.fill(data, 0xFF.toByte())
@@ -177,7 +180,7 @@ class SecureKeyManager(context: Context) {
         Arrays.fill(data, 0x00.toByte())
         
         // Pass 4: Random data again
-        random.nextBytes(data)
+        secureRandom.nextBytes(data)
         
         // Final pass: Zeros
         Arrays.fill(data, 0.toByte())
@@ -190,5 +193,8 @@ class SecureKeyManager(context: Context) {
         private const val AUTH_TIMEOUT_SECONDS = 300 // 5 minutes
         private const val KEY_ALIAS_PREFS = "secure_key_alias_prefs"
         private const val KEY_ALIAS_NAME = "master_key_alias_v3"
+        
+        // Shared SecureRandom instance for better randomness distribution
+        private val secureRandom = SecureRandom()
     }
 }

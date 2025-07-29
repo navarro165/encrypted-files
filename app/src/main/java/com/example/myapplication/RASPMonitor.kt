@@ -142,7 +142,7 @@ class RASPMonitor private constructor(private val context: Context) {
                 "gdb", "lldb", "dump", "memdump", "volatility", "rekall"
             )
             
-            val process = Runtime.getRuntime().exec("ps")
+            val process = Runtime.getRuntime().exec("/bin/ps")
             val scanner = Scanner(process.inputStream)
             while (scanner.hasNextLine()) {
                 val line = scanner.nextLine().lowercase()
@@ -223,7 +223,7 @@ class RASPMonitor private constructor(private val context: Context) {
             )
             
             for ((property, indicators) in emulatorIndicators) {
-                val process = Runtime.getRuntime().exec("getprop $property")
+                val process = Runtime.getRuntime().exec("/system/bin/getprop $property")
                 val scanner = Scanner(process.inputStream)
                 val value = if (scanner.hasNext()) scanner.nextLine().lowercase() else ""
                 scanner.close()
@@ -251,7 +251,7 @@ class RASPMonitor private constructor(private val context: Context) {
      */
     private fun isPiped(): Boolean {
         return try {
-            val process = Runtime.getRuntime().exec("getprop ro.kernel.qemu.gles")
+            val process = Runtime.getRuntime().exec("/system/bin/getprop ro.kernel.qemu.gles")
             val scanner = Scanner(process.inputStream)
             val result = if (scanner.hasNext()) scanner.nextLine() else ""
             scanner.close()
